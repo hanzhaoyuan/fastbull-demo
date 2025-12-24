@@ -79,6 +79,9 @@ let chart: IChartApi | null = null;
 let candlestickSeries: ISeriesApi<'Candlestick'> | null = null;
 let volumeSeries: ISeriesApi<'Histogram'> | null = null;
 
+// 保存标记定位函数的引用，以便在resize时调用
+let positionMarkersFunc: (() => void) | null = null;
+
 const mockDataService = new MockDataService();
 
 /**
@@ -220,6 +223,9 @@ const createCustomMarkers = (volumeData: any[]) => {
     });
   };
 
+  // 保存定位函数引用，供外部调用
+  positionMarkersFunc = positionMarkers;
+
   // 等图表完成渲染后再定位一次
   requestAnimationFrame(() => requestAnimationFrame(positionMarkers));
 
@@ -227,9 +233,6 @@ const createCustomMarkers = (volumeData: any[]) => {
   chart.timeScale().subscribeVisibleTimeRangeChange(() => {
     requestAnimationFrame(positionMarkers);
   });
-
-  // 跟随窗口尺寸变化
-  window.addEventListener('resize', () => requestAnimationFrame(positionMarkers));
 };
 
 /**
@@ -279,14 +282,44 @@ const loadData = () => {
 /**
  * 处理窗口大小变化
  */
+let resizeTimeout: ReturnType<typeof setTimeout> | null = null;
+
 const handleResize = () => {
-  if (chart && chartContainer.value) {
-    chart.applyOptions({
-      width: chartContainer.value.clientWidth,
-      height: chartContainer.value.clientHeight,
-    });
+  if (!chart || !chartContainer.value) return;
+
+  // 使用防抖优化性能
+  if (resizeTimeout) {
+    clearTimeout(resizeTimeout);
   }
+
+  resizeTimeout = setTimeout(() => {
+    if (chart && chartContainer.value) {
+      const newWidth = chartContainer.value.clientWidth;
+      const newHeight = chartContainer.value.clientHeight;
+
+      // 更新图表尺寸
+      chart.applyOptions({
+        width: newWidth,
+        height: newHeight,
+      });
+
+      // 强制重新适配时间轴，确保图表正确显示
+      chart.timeScale().fitContent();
+
+      // 重新定位C标记
+      if (positionMarkersFunc) {
+        requestAnimationFrame(() => {
+          if (positionMarkersFunc) {
+            positionMarkersFunc();
+          }
+        });
+      }
+    }
+  }, 100); // 100ms 防抖延迟
 };
+
+// ResizeObserver 用于监听容器大小变化
+let resizeObserver: ResizeObserver | null = null;
 
 // 监听 timeframe 变化
 watch(() => props.timeframe, () => {
@@ -296,11 +329,34 @@ watch(() => props.timeframe, () => {
 onMounted(() => {
   initChart();
   loadData();
+
+  // 监听 window resize
   window.addEventListener('resize', handleResize);
+
+  // 监听容器自身大小变化（当布局改变时）
+  if (chartContainer.value) {
+    resizeObserver = new ResizeObserver(() => {
+      handleResize();
+    });
+    resizeObserver.observe(chartContainer.value);
+  }
 });
 
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize);
+
+  // 清理防抖定时器
+  if (resizeTimeout) {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = null;
+  }
+
+  // 断开 ResizeObserver
+  if (resizeObserver) {
+    resizeObserver.disconnect();
+    resizeObserver = null;
+  }
+
   if (chart) {
     chart.remove();
   }
