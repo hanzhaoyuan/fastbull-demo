@@ -1,10 +1,17 @@
-<template>
+﻿<template>
   <div class="app">
     <!-- 左侧导航栏 -->
     <aside class="left-sidebar">
       <div class="sidebar-icon chart-logo" title="图表">
-        <svg viewBox="0 0 16 16" width="32" height="32" fill="#76808f">
-          <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+        <svg viewBox="0 0 32 32" width="32" height="32">
+          <defs>
+            <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#8B5CF6;stop-opacity:1" />
+              <stop offset="100%" style="stop-color:#EC4899;stop-opacity:1" />
+            </linearGradient>
+          </defs>
+          <circle cx="16" cy="16" r="14" fill="url(#logoGradient)"/>
+          <circle cx="24" cy="8" r="4" fill="#EF5350"/>
         </svg>
       </div>
       <div class="sidebar-icon" title="交易">
@@ -38,11 +45,11 @@
         </svg>
         <span class="sidebar-label">资讯</span>
       </div>
-      <div class="sidebar-icon" title="快讯">
+      <div class="sidebar-icon" title="快讯">
         <svg viewBox="0 0 24 24" width="24" height="24">
           <path d="M7 2v11h3v9l7-12h-4l4-8z" fill="currentColor"/>
         </svg>
-        <span class="sidebar-label">快讯</span>
+        <span class="sidebar-label">快讯</span>
       </div>
       <div class="sidebar-icon" title="日历">
         <svg viewBox="0 0 24 24" width="24" height="24">
@@ -60,7 +67,7 @@
 
     <!-- 主内容区 -->
     <main class="main-content">
-      <!-- 顶部工具栏 -->
+      <!-- 顶部工具栏-->
       <div class="top-toolbar">
         <div class="toolbar-left">
           <button class="toolbar-btn">
@@ -216,32 +223,7 @@
           </div>
         </div>
 
-        <div class="broker-cards">
-          <div class="broker-card">
-            <div class="broker-logo green">
-              <div class="logo-text">Fast<br/>Bull</div>
-            </div>
-            <div class="broker-info">
-              <div class="broker-name">FastBull</div>
-              <div class="broker-desc">体验模拟交易</div>
-            </div>
-          </div>
-
-          <div class="broker-card recommended">
-            <span class="recommend-badge">推荐</span>
-            <div class="broker-logo black">
-              <svg viewBox="0 0 24 24" width="24" height="24">
-                <rect width="3" height="12" x="4" y="6" fill="#FFD700"/>
-                <rect width="3" height="16" x="10" y="4" fill="#FFD700"/>
-                <rect width="3" height="10" x="17" y="8" fill="#FFD700"/>
-              </svg>
-            </div>
-            <div class="broker-info">
-              <div class="broker-name">BeeMarkets</div>
-              <div class="broker-desc">佣金 $ 1.5 起，全球最低</div>
-            </div>
-          </div>
-        </div>
+        
 
         <div class="status-bar">
           <div class="status-left">
@@ -283,7 +265,7 @@ const selectedTimeframe = ref('H1');
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
-/* 左侧导航栏 */
+/* 左侧导航栏*/
 .left-sidebar {
   width: 64px;
   background: #ffffff;
@@ -355,7 +337,7 @@ const selectedTimeframe = ref('H1');
   overflow: hidden;
 }
 
-/* 顶部工具栏 */
+/* 顶部工具栏*/
 .top-toolbar {
   background: #ffffff;
   border-bottom: 1px solid #e0e3eb;
@@ -480,14 +462,14 @@ const selectedTimeframe = ref('H1');
   padding: 0 16px;
   gap: 8px;
   border-bottom: 1px solid #e0e3eb;
-  height: 40px;
+  height: 48px;
 }
 
 .tab-btn {
   background: transparent;
   border: none;
   color: #76808f;
-  padding: 8px 12px;
+  padding: 10px 14px;
   cursor: pointer;
   font-size: 13px;
   display: flex;
@@ -533,7 +515,7 @@ const selectedTimeframe = ref('H1');
 .broker-cards {
   display: flex;
   gap: 16px;
-  padding: 16px;
+  padding: 20px;
   background: #f8f9fa;
 }
 
@@ -542,7 +524,7 @@ const selectedTimeframe = ref('H1');
   background: #ffffff;
   border: 1px solid #e0e3eb;
   border-radius: 8px;
-  padding: 16px;
+  padding: 20px;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -573,8 +555,8 @@ const selectedTimeframe = ref('H1');
 }
 
 .broker-logo {
-  width: 48px;
-  height: 48px;
+  width: 56px;
+  height: 56px;
   border-radius: 8px;
   display: flex;
   align-items: center;
@@ -618,7 +600,7 @@ const selectedTimeframe = ref('H1');
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 16px;
+  padding: 10px 16px;
   background: #ffffff;
   border-top: 1px solid #e0e3eb;
   font-size: 12px;
@@ -657,3 +639,4 @@ const selectedTimeframe = ref('H1');
   font-weight: 600;
 }
 </style>
+

@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="chart-container">
     <!-- 顶部信息栏 -->
     <div class="chart-header">
@@ -20,11 +20,10 @@
       <div class="current-price">0.67045</div>
     </div>
 
-    <!-- 主图表区域 -->
-    <div ref="mainChartContainer" class="main-chart"></div>
-
-    <!-- 成交量图表区域 -->
-    <div ref="volumeChartContainer" class="volume-chart"></div>
+    <!-- 主图表区域（包含K线图和成交量图） -->
+    <div ref="chartContainer" class="main-chart">
+      <div ref="markersContainer" class="markers-overlay"></div>
+    </div>
 
     <!-- 图表底部标签 -->
     <div class="chart-footer">
@@ -66,30 +65,29 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch } from 'vue';
-import { createChart, IChartApi, ISeriesApi, SeriesMarkerPosition, SeriesMarkerShape } from 'lightweight-charts';
+import { createChart, IChartApi, ISeriesApi } from 'lightweight-charts';
 import { MockDataService } from '../services/MockDataService';
 
 const props = defineProps<{
   timeframe: string;
 }>();
 
-const mainChartContainer = ref<HTMLDivElement>();
-const volumeChartContainer = ref<HTMLDivElement>();
+const chartContainer = ref<HTMLDivElement>();
+const markersContainer = ref<HTMLDivElement>();
 
-let mainChart: IChartApi | null = null;
-let volumeChart: IChartApi | null = null;
+let chart: IChartApi | null = null;
 let candlestickSeries: ISeriesApi<'Candlestick'> | null = null;
 let volumeSeries: ISeriesApi<'Histogram'> | null = null;
 
 const mockDataService = new MockDataService();
 
 /**
- * 初始化主图表
+ * 初始化图表（包含K线和成交量）
  */
-const initMainChart = () => {
-  if (!mainChartContainer.value) return;
+const initChart = () => {
+  if (!chartContainer.value) return;
 
-  mainChart = createChart(mainChartContainer.value, {
+  chart = createChart(chartContainer.value, {
     layout: {
       background: { color: '#ffffff' },
       textColor: '#76808f',
@@ -103,78 +101,135 @@ const initMainChart = () => {
       vertLine: {
         color: '#9598a1',
         width: 1,
-        style: 3,
+        style: 0,
       },
       horzLine: {
         color: '#9598a1',
         width: 1,
-        style: 3,
+        style: 0,
       },
-    },
-    rightPriceScale: {
-      borderColor: '#e0e3eb',
-      textColor: '#76808f',
-    },
-    timeScale: {
-      borderColor: '#e0e3eb',
-      timeVisible: true,
-      secondsVisible: false,
-    },
-    watermark: {
-      visible: false,
-    },
-    width: mainChartContainer.value.clientWidth,
-    height: mainChartContainer.value.clientHeight,
-  });
-
-  candlestickSeries = mainChart.addCandlestickSeries({
-    upColor: '#26a69a',
-    downColor: '#ef5350',
-    borderVisible: false,
-    wickUpColor: '#26a69a',
-    wickDownColor: '#ef5350',
-  });
-};
-
-/**
- * 初始化成交量图表
- */
-const initVolumeChart = () => {
-  if (!volumeChartContainer.value) return;
-
-  volumeChart = createChart(volumeChartContainer.value, {
-    layout: {
-      background: { color: '#ffffff' },
-      textColor: '#76808f',
-    },
-    grid: {
-      vertLines: { color: '#f0f3fa' },
-      horzLines: { color: '#f0f3fa' },
     },
     rightPriceScale: {
       borderColor: '#e0e3eb',
       scaleMargins: {
         top: 0.1,
-        bottom: 0.2,
+        bottom: 0.26, // 为成交量预留26%的空间
       },
     },
     timeScale: {
       borderColor: '#e0e3eb',
-      visible: false,
+      timeVisible: true,
+      secondsVisible: false,
+      rightOffset: 6,
+      barSpacing: 8,
+      fixLeftEdge: true,
+      lockVisibleTimeRangeOnResize: true,
     },
     watermark: {
       visible: false,
     },
-    width: volumeChartContainer.value.clientWidth,
-    height: 150,
+    width: chartContainer.value.clientWidth,
+    height: chartContainer.value.clientHeight,
   });
 
-  volumeSeries = volumeChart.addHistogramSeries({
+  // 添加K线系列（占据上方70%空间）
+  candlestickSeries = chart.addCandlestickSeries({
+    upColor: '#26a69a',
+    downColor: '#ef5350',
+    borderVisible: false,
+    wickUpColor: '#26a69a',
+    wickDownColor: '#ef5350',
+    lastValueVisible: true,
+    priceLineVisible: true,
+    priceLineColor: '#26a69a',
+    priceLineWidth: 1,
+    priceLineStyle: 0,
+    priceFormat: { type: 'price', precision: 5, minMove: 0.00001 },
+  });
+
+  // 添加成交量系列（在同一个图表中，使用独立的价格刻度，占据下方30%空间）
+  volumeSeries = chart.addHistogramSeries({
+    color: 'rgba(38, 166, 154, 0.5)',
     priceFormat: {
       type: 'volume',
     },
-    priceScaleId: '',
+    priceScaleId: 'volume', // 使用独立的价格刻度ID
   });
+
+  // 为成交量设置独立的价格刻度配置
+  chart.priceScale('volume').applyOptions({    scaleMargins: {
+      top: 0.74, // 成交量图自 74% 起
+      bottom: 0,
+    },
+  });
+};
+
+/**
+ * 创建自定义的HTML标记（空心橙色圆圈带"C"）
+ */
+const createCustomMarkers = (volumeData: any[]) => {
+  if (!markersContainer.value || !chart) return;
+
+  // 清空现有标记
+  markersContainer.value.innerHTML = '';
+
+  // 生成标记位置（示例：每10~22根生成一个）
+  const markerIndices: number[] = [];
+  for (let i = 15; i < volumeData.length; i += Math.floor(Math.random() * 12 + 10)) {
+    markerIndices.push(i);
+  }
+
+  const markerData = markerIndices.map(index => ({
+    index,
+    time: (volumeData[index] && volumeData[index].time) || 0,
+  }));
+
+  // 创建HTML标记元素
+  markerData.forEach((data) => {
+    const el = document.createElement('div');
+    el.className = 'calendar-marker';
+    el.textContent = 'C';
+    el.setAttribute('data-time', String(data.time));
+    el.style.visibility = 'hidden';
+    markersContainer.value!.appendChild(el);
+  });
+
+  // 定位函数：将 time 映射为像素
+  const positionMarkers = () => {
+    if (!chart || !markersContainer.value || !chartContainer.value) return;
+    const timeScale = chart.timeScale();
+    const chartWidth = chartContainer.value.clientWidth;
+    const chartHeight = chartContainer.value.clientHeight;
+
+    // 使用成交量序列基线(0)的像素坐标，兜底用原先的近底部位置
+    const baselineY = volumeSeries?.priceToCoordinate(0);
+    const TIME_AXIS_PX = 28;
+    const fallbackY = chartHeight - TIME_AXIS_PX;
+
+    const nodes = markersContainer.value.querySelectorAll('.calendar-marker');
+    nodes.forEach((node) => {
+      const time = parseFloat((node as HTMLElement).getAttribute('data-time') || '0');
+      const x = timeScale.timeToCoordinate(time as any);
+      if (x != null && x >= 0 && x <= chartWidth) {
+        (node as HTMLElement).style.left = x + 'px';
+        (node as HTMLElement).style.top = ((baselineY ?? fallbackY)) + 'px';
+        (node as HTMLElement).style.visibility = 'visible';
+      } else {
+        (node as HTMLElement).style.visibility = 'hidden';
+      }
+    });
+  };
+
+  // 等图表完成渲染后再定位一次
+  requestAnimationFrame(() => requestAnimationFrame(positionMarkers));
+
+  // 跟随时间轴缩放滚动
+  chart.timeScale().subscribeVisibleTimeRangeChange(() => {
+    requestAnimationFrame(positionMarkers);
+  });
+
+  // 跟随窗口尺寸变化
+  window.addEventListener('resize', () => requestAnimationFrame(positionMarkers));
 };
 
 /**
@@ -202,33 +257,22 @@ const loadData = () => {
   }
 
   if (volumeSeries) {
-    volumeSeries.setData(volumeData);
-
-    // 在成交量图上添加带"C"的橙色圆圈标记
-    const volumeMarkers = [];
-    for (let i = 15; i < volumeData.length; i += Math.floor(Math.random() * 12 + 10)) {
-      volumeMarkers.push({
-        time: volumeData[i].time,
-        position: 'aboveBar' as SeriesMarkerPosition,
-        color: '#FF9800',
-        shape: 'circle' as SeriesMarkerShape,
-        text: 'C',
-      });
-    }
-    volumeSeries.setMarkers(volumeMarkers);
+    // 为成交量数据添加颜色（根据涨跌）
+    const coloredVolumeData = volumeData.map((item, index) => {
+      const candle = candleData[index];
+      const color = candle.close >= candle.open ? 'rgba(38, 166, 154, 0.5)' : 'rgba(239, 83, 80, 0.5)';
+      return {
+        ...item,
+        color: color,
+      };
+    });
+    volumeSeries.setData(coloredVolumeData);
   }
 
-  // 同步时间轴
-  if (mainChart && volumeChart) {
-    mainChart.timeScale().fitContent();
-    volumeChart.timeScale().fitContent();
-
-    // 同步缩放和滚动
-    mainChart.timeScale().subscribeVisibleLogicalRangeChange((timeRange) => {
-      if (timeRange && volumeChart) {
-        volumeChart.timeScale().setVisibleLogicalRange(timeRange);
-      }
-    });
+  if (chart) {
+    chart.timeScale().fitContent();
+    // 设置时间范围完成后创建C事件标记
+    createCustomMarkers(volumeData);
   }
 };
 
@@ -236,16 +280,10 @@ const loadData = () => {
  * 处理窗口大小变化
  */
 const handleResize = () => {
-  if (mainChart && mainChartContainer.value) {
-    mainChart.applyOptions({
-      width: mainChartContainer.value.clientWidth,
-      height: mainChartContainer.value.clientHeight,
-    });
-  }
-  if (volumeChart && volumeChartContainer.value) {
-    volumeChart.applyOptions({
-      width: volumeChartContainer.value.clientWidth,
-      height: 150,
+  if (chart && chartContainer.value) {
+    chart.applyOptions({
+      width: chartContainer.value.clientWidth,
+      height: chartContainer.value.clientHeight,
     });
   }
 };
@@ -256,19 +294,15 @@ watch(() => props.timeframe, () => {
 });
 
 onMounted(() => {
-  initMainChart();
-  initVolumeChart();
-  loadData();  // 在两个图表都初始化后再加载数据
+  initChart();
+  loadData();
   window.addEventListener('resize', handleResize);
 });
 
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize);
-  if (mainChart) {
-    mainChart.remove();
-  }
-  if (volumeChart) {
-    volumeChart.remove();
+  if (chart) {
+    chart.remove();
   }
 });
 </script>
@@ -371,14 +405,6 @@ onUnmounted(() => {
   position: relative;
 }
 
-.volume-chart {
-  height: 150px;
-  min-height: 150px;
-  flex-shrink: 0;
-  border-top: 1px solid #e0e3eb;
-  background: #fafbfc;
-}
-
 .chart-footer {
   display: flex;
   align-items: center;
@@ -469,7 +495,7 @@ onUnmounted(() => {
 
 .settings-btn {
   position: absolute;
-  bottom: 140px;
+  bottom: 50px;
   right: 12px;
   width: 36px;
   height: 36px;
@@ -490,4 +516,43 @@ onUnmounted(() => {
   color: #3b4252;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 }
+
+.markers-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 100;
+  overflow: visible;
+}
+
+:deep(.calendar-marker) {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border: 2px solid #FF9800;
+  border-radius: 50%;
+  background-color: #ffffff;
+  color: #FF9800;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translate(-50%, calc(2px - 100%));
+  cursor: pointer;
+  pointer-events: auto;
+  visibility: hidden;
+  box-sizing: border-box;
+  line-height: 1;
+}
+
+:deep(.calendar-marker:hover) {
+  background-color: rgba(255, 152, 0, 0.15);
+}
 </style>
+
+
+

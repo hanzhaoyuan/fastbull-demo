@@ -74,7 +74,7 @@ export class MockDataService {
     return candlestickData.map((candle) => ({
       time: candle.time,
       value: parseFloat((Math.random() * 500 + 200).toFixed(2)),
-      color: candle.close >= candle.open ? '#26a69a' : '#ef5350',
+      color: candle.close >= candle.open ? 'rgba(38, 166, 154, 0.3)' : 'rgba(239, 83, 80, 0.3)',
     }));
   }
 }
