@@ -317,13 +317,7 @@
 
           <!-- 量化 -->
           <div v-if="activeTab === 'quantitative'" class="quantitative-panel">
-            <div class="empty-message">
-              <svg viewBox="0 0 24 24" width="48" height="48">
-                <path d="M3 13h8v-2H3v2zm0 4h8v-2H3v2zm0-8h8V7H3v2zm10 0v10l9-5-9-5z" fill="currentColor" opacity="0.3"/>
-              </svg>
-              <p>量化交易</p>
-              <span>配置和运行量化交易策略</span>
-            </div>
+            <QuantitativeEditor />
           </div>
 
           <!-- 日志 -->
@@ -376,6 +370,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import ChartContainer from './components/ChartContainer.vue';
+import QuantitativeEditor from './components/QuantitativeEditor.vue';
 
 const timeframes = ['S1', 'S3', 'M1', 'M15', 'M30', 'H1', 'D1', 'W1', 'MN1'];
 const indicators = ['MA', 'Bollinger', 'MACD', 'RSI', 'ATR', 'Stoch', 'MFI', 'Volumes'];
@@ -892,12 +887,19 @@ const toggleMaximize = () => {
 /* 其他面板 */
 .account-panel,
 .strategy-panel,
-.quantitative-panel,
 .logs-panel {
   height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: #f8f9fa;
+}
+
+/* 量化面板 - 特殊处理 */
+.quantitative-panel {
+  height: 100%;
+  width: 100%;
+  display: flex;
   background: #f8f9fa;
 }
 
