@@ -125,8 +125,9 @@
         <div class="toolbar-right">
           <button class="tool-btn" @click="saveFile">保存</button>
           <button class="tool-btn" @click="checkCode">检查</button>
-          <button class="tool-btn" @click="backtest">回测</button>
-          <button class="tool-btn" @click="startStrategy">启动</button>
+          <button v-if="currentFile.type === 'indicator'" class="tool-btn" @click="addIndicator">添加</button>
+          <button v-if="currentFile.type === 'strategy'" class="tool-btn" @click="backtest">回测</button>
+          <button v-if="currentFile.type === 'strategy'" class="tool-btn" @click="startStrategy">启动</button>
           <button class="tool-btn more">更多</button>
         </div>
       </div>
@@ -249,6 +250,82 @@
         </div>
       </div>
     </div>
+
+    <!-- 新建文件弹窗 -->
+    <div v-if="showNewFileDialog" class="dialog-overlay" @click="showNewFileDialog = false">
+      <div class="dialog-container" @click.stop>
+        <div class="dialog-header">
+          <h3 class="dialog-title">新建{{ newFileType === 'indicator' ? '指标' : newFileType === 'strategy' ? '策略' : '库' }}</h3>
+          <button class="dialog-close" @click="showNewFileDialog = false">
+            <svg viewBox="0 0 24 24" width="20" height="20">
+              <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" fill="currentColor"/>
+            </svg>
+          </button>
+        </div>
+        <div class="dialog-body">
+          <div class="about-section">
+            <label class="about-label">名称 <span class="required">*</span></label>
+            <input
+              v-model="newFileName"
+              :class="['about-input', { 'input-error': fileNameError }]"
+              placeholder="请输入文件名（不含扩展名）"
+              @input="validateFileName(newFileName)"
+              maxlength="100"
+            >
+            <span v-if="fileNameError" class="error-message">{{ fileNameError }}</span>
+            <span class="input-hint">{{ newFileName.length }}/100 字符，仅支持文字、字母、数字、下划线</span>
+          </div>
+
+          <div class="about-section">
+            <label class="about-label">模板</label>
+            <select v-model="newFileTemplate" class="about-select">
+              <option v-for="template in getTemplateOptions(newFileType)" :key="template" :value="template">
+                {{ template }}
+              </option>
+            </select>
+          </div>
+
+          <!-- 高级选项（默认收起） -->
+          <div class="advanced-toggle" @click="showAdvancedOptions = !showAdvancedOptions">
+            <svg class="collapse-icon" :class="{ collapsed: !showAdvancedOptions }" viewBox="0 0 16 16" width="12" height="12">
+              <path fill="currentColor" d="M5 6l3 3 3-3z"/>
+            </svg>
+            <span>高级选项</span>
+          </div>
+
+          <div v-show="showAdvancedOptions" class="advanced-options">
+            <div class="about-section">
+              <label class="about-label">版本</label>
+              <input
+                v-model="newFileVersion"
+                class="about-input"
+                placeholder="例如：1.0.0"
+                @input="e => { if (!validateVersion(newFileVersion)) newFileVersion = newFileVersion.slice(0, -1) }"
+                maxlength="100"
+              >
+              <span class="input-hint">{{ newFileVersion.length }}/100 字符，仅支持文字、字母、数字、下划线、句号</span>
+            </div>
+
+            <div class="about-section">
+              <label class="about-label">介绍</label>
+              <textarea
+                v-model="newFileDescription"
+                class="about-textarea"
+                placeholder="请输入文件介绍"
+                rows="3"
+                @input="e => { if (!validateDescription(newFileDescription)) newFileDescription = newFileDescription.slice(0, -1) }"
+                maxlength="300"
+              ></textarea>
+              <span class="input-hint">{{ newFileDescription.length }}/300 字符</span>
+            </div>
+          </div>
+        </div>
+        <div class="dialog-footer">
+          <button class="dialog-btn secondary" @click="showNewFileDialog = false">取消</button>
+          <button class="dialog-btn primary" @click="createNewFile" :disabled="!!fileNameError || !newFileName">创建</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -279,6 +356,7 @@ interface CodeFile {
   lastModified: string;
   description?: string;
   author?: string;
+  version?: string;
 }
 
 interface Problem {
@@ -356,6 +434,14 @@ const currentFile = ref<CodeFile | null>(null);
 const editorContainer = ref<HTMLDivElement>();
 const bottomPanel = ref<'terminal' | 'problems' | null>('terminal');
 const showAboutDialog = ref(false);
+const showNewFileDialog = ref(false);
+const newFileType = ref<'indicator' | 'strategy' | 'library'>('indicator');
+const newFileName = ref('');
+const newFileTemplate = ref('空白模板');
+const newFileVersion = ref('1.0.0');
+const newFileDescription = ref('');
+const showAdvancedOptions = ref(false);
+const fileNameError = ref('');
 
 // 控制每个面板的可见性
 const panelVisibility = ref({
@@ -442,23 +528,162 @@ const toggleAllCategories = () => {
 
 // 添加文件
 const addFile = (type: 'indicator' | 'strategy' | 'library') => {
-  const newFile: CodeFile = {
-    id: Date.now().toString(),
-    name: `new_${type}.py`,
-    type,
-    content: `# New ${type}\n`,
-    lastModified: new Date().toLocaleString('zh-CN')
+  newFileType.value = type;
+  newFileName.value = '';
+  newFileTemplate.value = '空白模板';
+  newFileVersion.value = '1.0.0';
+  newFileDescription.value = '';
+  showAdvancedOptions.value = false;
+  fileNameError.value = '';
+  showNewFileDialog.value = true;
+};
+
+// 验证文件名
+const validateFileName = (name: string): boolean => {
+  if (!name) {
+    fileNameError.value = '名称不能为空';
+    return false;
+  }
+  if (name.length > 100) {
+    fileNameError.value = '名称不能超过100个字符';
+    return false;
+  }
+  // 只允许文字（包括中文）、英文字母、数字、下划线
+  const validPattern = /^[\u4e00-\u9fa5a-zA-Z0-9_]+$/;
+  if (!validPattern.test(name)) {
+    fileNameError.value = '名称只能包含文字、字母、数字和下划线';
+    return false;
+  }
+  fileNameError.value = '';
+  return true;
+};
+
+// 验证版本号
+const validateVersion = (version: string): boolean => {
+  if (version.length > 100) {
+    return false;
+  }
+  // 只允许文字、字母、数字、下划线、句号
+  const validPattern = /^[\u4e00-\u9fa5a-zA-Z0-9_.]+$/;
+  return validPattern.test(version);
+};
+
+// 验证介绍
+const validateDescription = (description: string): boolean => {
+  if (description.length > 300) {
+    return false;
+  }
+  return true;
+};
+
+// 获取模板内容
+const getTemplateContent = (type: 'indicator' | 'strategy' | 'library', template: string): string => {
+  const templates: Record<string, Record<string, string>> = {
+    indicator: {
+      '空白模板': '# 新建指标\n',
+      'MA指标模板': `# 移动平均线指标
+def calculate_ma(data, period):
+    """计算移动平均线"""
+    # TODO: 实现移动平均线计算
+    pass
+`,
+      'RSI指标模板': `# RSI指标
+def calculate_rsi(data, period=14):
+    """计算RSI指标"""
+    # TODO: 实现RSI计算
+    pass
+`
+    },
+    strategy: {
+      '空白模板': '# 新建策略\n',
+      '趋势跟踪策略模板': `# 趋势跟踪策略
+class TrendFollowingStrategy:
+    def __init__(self):
+        pass
+
+    def on_bar(self, bar):
+        """K线数据回调"""
+        # TODO: 实现策略逻辑
+        pass
+`,
+      '网格交易策略模板': `# 网格交易策略
+class GridTradingStrategy:
+    def __init__(self):
+        self.grid_levels = []
+
+    def on_bar(self, bar):
+        """K线数据回调"""
+        # TODO: 实现网格交易逻辑
+        pass
+`
+    },
+    library: {
+      '空白模板': '# 新建库\n',
+      '工具函数库模板': `# 工具函数库
+def format_price(price, precision=2):
+    """格式化价格"""
+    return round(price, precision)
+
+def calculate_profit(entry_price, exit_price, volume):
+    """计算盈亏"""
+    return (exit_price - entry_price) * volume
+`,
+      '数据处理库模板': `# 数据处理库
+import pandas as pd
+
+def process_data(data):
+    """处理数据"""
+    # TODO: 实现数据处理逻辑
+    pass
+`
+    }
   };
 
-  if (type === 'indicator') {
+  return templates[type][template] || templates[type]['空白模板'];
+};
+
+// 获取模板选项
+const getTemplateOptions = (type: 'indicator' | 'strategy' | 'library'): string[] => {
+  const options: Record<string, string[]> = {
+    indicator: ['空白模板', 'MA指标模板', 'RSI指标模板'],
+    strategy: ['空白模板', '趋势跟踪策略模板', '网格交易策略模板'],
+    library: ['空白模板', '工具函数库模板', '数据处理库模板']
+  };
+  return options[type] || ['空白模板'];
+};
+
+// 创建新文件
+const createNewFile = () => {
+  // 验证文件名
+  if (!validateFileName(newFileName.value)) {
+    return;
+  }
+
+  const fileName = newFileName.value + '.py';
+  const templateContent = getTemplateContent(newFileType.value, newFileTemplate.value);
+
+  const newFile: CodeFile = {
+    id: Date.now().toString(),
+    name: fileName,
+    type: newFileType.value,
+    content: templateContent,
+    lastModified: new Date().toLocaleString('zh-CN'),
+    description: newFileDescription.value,
+    author: '当前用户',
+    version: newFileVersion.value
+  };
+
+  if (newFileType.value === 'indicator') {
     indicatorFiles.value.push(newFile);
-  } else if (type === 'strategy') {
+  } else if (newFileType.value === 'strategy') {
     strategyFiles.value.push(newFile);
   } else {
     libraryFiles.value.push(newFile);
   }
 
   openFile(newFile);
+  showNewFileDialog.value = false;
+  terminalOutput.value.push(`> 已创建新文件: ${fileName}`);
 };
 
 // 显示文件菜单
@@ -479,6 +704,12 @@ const saveFile = () => {
 const checkCode = () => {
   terminalOutput.value.push('> 正在检查代码...');
   // TODO: 实现代码检查逻辑
+};
+
+// 添加指标
+const addIndicator = () => {
+  terminalOutput.value.push('> 添加指标到图表...');
+  // TODO: 实现添加指标逻辑
 };
 
 // 回测
@@ -1433,4 +1664,91 @@ onUnmounted(() => {
 .dialog-btn.primary:active {
   transform: translateY(0);
 }
+
+/* 新建文件对话框样式 */
+.required {
+  color: #ef5350;
+  margin-left: 2px;
+}
+
+.input-error {
+  border-color: #ef5350 !important;
+}
+
+.error-message {
+  display: block;
+  color: #ef5350;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.input-hint {
+  display: block;
+  color: #76808f;
+  font-size: 11px;
+  margin-top: 4px;
+}
+
+.about-select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #e0e3eb;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #3b4252;
+  background: #ffffff;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+  cursor: pointer;
+  outline: none;
+}
+
+.about-select:focus {
+  border-color: #2962ff;
+  box-shadow: 0 0 0 3px rgba(41, 98, 255, 0.1);
+}
+
+.advanced-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 0;
+  cursor: pointer;
+  user-select: none;
+  color: #3b4252;
+  font-size: 13px;
+  font-weight: 500;
+  margin-top: 8px;
+  transition: color 0.2s;
+}
+
+.advanced-toggle:hover {
+  color: #2962ff;
+}
+
+.advanced-toggle .collapse-icon {
+  color: #76808f;
+  transition: transform 0.2s ease;
+}
+
+.advanced-toggle .collapse-icon.collapsed {
+  transform: rotate(-90deg);
+}
+
+.advanced-options {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed #e0e3eb;
+}
+
+.dialog-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.dialog-btn:disabled:hover {
+  transform: none;
+  box-shadow: 0 2px 8px rgba(41, 98, 255, 0.2);
+}
+
 </style>
