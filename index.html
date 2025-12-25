@@ -1,34 +1,34 @@
 <!doctype html>
 <html lang="zh-CN">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>量化系统</title>
-    <link rel="icon" href="/logo/fb.png" />
+    <link rel="icon" href="/logo/fb.png"/>
     <script>
-      // 配置 Monaco Editor 环境
-      window.MonacoEnvironment = {
-        getWorkerUrl: function(moduleId, label) {
-          const baseUrl = window.location.origin;
-          if (label === 'json') {
-            return baseUrl + '/monacoeditorwork/json.worker.bundle.js';
-          }
-          if (label === 'css' || label === 'scss' || label === 'less') {
-            return baseUrl + '/monacoeditorwork/css.worker.bundle.js';
-          }
-          if (label === 'html' || label === 'handlebars' || label === 'razor') {
-            return baseUrl + '/monacoeditorwork/html.worker.bundle.js';
-          }
-          if (label === 'typescript' || label === 'javascript') {
-            return baseUrl + '/monacoeditorwork/ts.worker.bundle.js';
-          }
-          return baseUrl + '/monacoeditorwork/editor.worker.bundle.js';
-        }
-      };
+        // 配置 Monaco Editor 环境
+        window.MonacoEnvironment = {
+            getWorkerUrl: function (moduleId, label) {
+                const baseUrl = window.location.origin;
+                if (label === 'json') {
+                    return baseUrl + '/monacoeditorwork/json.worker.bundle.js';
+                }
+                if (label === 'css' || label === 'scss' || label === 'less') {
+                    return baseUrl + '/monacoeditorwork/css.worker.bundle.js';
+                }
+                if (label === 'html' || label === 'handlebars' || label === 'razor') {
+                    return baseUrl + '/monacoeditorwork/html.worker.bundle.js';
+                }
+                if (label === 'typescript' || label === 'javascript') {
+                    return baseUrl + '/monacoeditorwork/ts.worker.bundle.js';
+                }
+                return baseUrl + '/monacoeditorwork/editor.worker.bundle.js';
+            }
+        };
     </script>
-  </head>
-  <body>
-    <div id="app"></div>
-    <script type="module" src="/src/main.ts"></script>
-  </body>
+</head>
+<body>
+<div id="app"></div>
+<script type="module" src="/src/main.ts"></script>
+</body>
 </html>

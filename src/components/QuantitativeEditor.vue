@@ -19,7 +19,8 @@
       <!-- 指标分类 -->
       <div class="file-category">
         <div class="category-header" @click="toggleCategory('indicator')">
-          <svg class="collapse-icon" :class="{ collapsed: !categoryExpanded.indicator }" viewBox="0 0 16 16" width="12" height="12">
+          <svg class="collapse-icon" :class="{ collapsed: !categoryExpanded.indicator }" viewBox="0 0 16 16" width="12"
+               height="12">
             <path fill="currentColor" d="M5 6l3 3 3-3z"/>
           </svg>
           <span class="category-title">指标</span>
@@ -27,10 +28,10 @@
         </div>
         <div class="file-list" v-show="categoryExpanded.indicator">
           <div
-            v-for="file in indicatorFiles"
-            :key="file.id"
-            :class="['file-item', { active: currentFile?.id === file.id }]"
-            @click="openFile(file)"
+              v-for="file in indicatorFiles"
+              :key="file.id"
+              :class="['file-item', { active: currentFile?.id === file.id }]"
+              @click="openFile(file)"
           >
             <svg class="file-icon" viewBox="0 0 16 16" width="16" height="16">
               <path fill="currentColor" d="M4 0h5.5L14 4.5V16H2V0h2zm0 1v14h9V5h-4V1H4z"/>
@@ -44,7 +45,8 @@
       <!-- 策略分类 -->
       <div class="file-category">
         <div class="category-header" @click="toggleCategory('strategy')">
-          <svg class="collapse-icon" :class="{ collapsed: !categoryExpanded.strategy }" viewBox="0 0 16 16" width="12" height="12">
+          <svg class="collapse-icon" :class="{ collapsed: !categoryExpanded.strategy }" viewBox="0 0 16 16" width="12"
+               height="12">
             <path fill="currentColor" d="M5 6l3 3 3-3z"/>
           </svg>
           <span class="category-title">策略</span>
@@ -52,10 +54,10 @@
         </div>
         <div class="file-list" v-show="categoryExpanded.strategy">
           <div
-            v-for="file in strategyFiles"
-            :key="file.id"
-            :class="['file-item', { active: currentFile?.id === file.id }]"
-            @click="openFile(file)"
+              v-for="file in strategyFiles"
+              :key="file.id"
+              :class="['file-item', { active: currentFile?.id === file.id }]"
+              @click="openFile(file)"
           >
             <svg class="file-icon" viewBox="0 0 16 16" width="16" height="16">
               <path fill="currentColor" d="M4 0h5.5L14 4.5V16H2V0h2zm0 1v14h9V5h-4V1H4z"/>
@@ -69,7 +71,8 @@
       <!-- 库分类 -->
       <div class="file-category">
         <div class="category-header" @click="toggleCategory('library')">
-          <svg class="collapse-icon" :class="{ collapsed: !categoryExpanded.library }" viewBox="0 0 16 16" width="12" height="12">
+          <svg class="collapse-icon" :class="{ collapsed: !categoryExpanded.library }" viewBox="0 0 16 16" width="12"
+               height="12">
             <path fill="currentColor" d="M5 6l3 3 3-3z"/>
           </svg>
           <span class="category-title">库</span>
@@ -77,10 +80,10 @@
         </div>
         <div class="file-list" v-show="categoryExpanded.library">
           <div
-            v-for="file in libraryFiles"
-            :key="file.id"
-            :class="['file-item', { active: currentFile?.id === file.id }]"
-            @click="openFile(file)"
+              v-for="file in libraryFiles"
+              :key="file.id"
+              :class="['file-item', { active: currentFile?.id === file.id }]"
+              @click="openFile(file)"
           >
             <svg class="file-icon" viewBox="0 0 16 16" width="16" height="16">
               <path fill="currentColor" d="M4 0h5.5L14 4.5V16H2V0h2zm0 1v14h9V5h-4V1H4z"/>
@@ -94,17 +97,31 @@
 
     <!-- 拖拽分割线 -->
     <div
-      class="vertical-resize-handle"
-      @mousedown="startSidebarResize"
-      :class="{ 'is-resizing': isSidebarResizing }"
+        class="vertical-resize-handle"
+        @mousedown="startSidebarResize"
+        :class="{ 'is-resizing': isSidebarResizing }"
     >
       <div class="vertical-resize-handle-line"></div>
     </div>
 
     <!-- 右侧编辑区域 -->
     <div class="editor-main">
-      <!-- 顶部工具栏 -->
-      <div class="editor-toolbar">
+      <!-- 顶部工具栏 - 合并文件信息和按钮 -->
+      <div class="editor-toolbar" v-if="currentFile">
+        <div class="file-info-section">
+          <span class="file-name-display">{{ currentFile.name }}</span>
+          <button
+              class="about-btn"
+              @click="showAboutDialog = true"
+              title="查看或编辑策略/指标/库信息"
+          >
+            <svg viewBox="0 0 24 24" width="16" height="16">
+              <circle cx="12" cy="12" r="10" fill="currentColor"/>
+              <text x="12" y="17" text-anchor="middle" font-size="14" fill="#ffffff" font-weight="bold">i</text>
+            </svg>
+          </button>
+          <span class="file-meta">最后编辑时间 {{ currentFile.lastModified }}</span>
+        </div>
         <div class="toolbar-right">
           <button class="tool-btn" @click="saveFile">保存</button>
           <button class="tool-btn" @click="checkCode">检查</button>
@@ -114,31 +131,15 @@
         </div>
       </div>
 
-      <!-- 文件信息栏 -->
-      <div class="file-info-bar" v-if="currentFile">
-        <span class="file-name-display">{{ currentFile.name }}</span>
-        <button
-          class="about-btn"
-          @click="showAboutDialog = true"
-          title="查看或编辑策略/指标/库信息"
-        >
-          <svg viewBox="0 0 24 24" width="16" height="16">
-            <circle cx="12" cy="12" r="10" fill="currentColor"/>
-            <text x="12" y="17" text-anchor="middle" font-size="14" fill="#ffffff" font-weight="bold">i</text>
-          </svg>
-        </button>
-        <span class="file-meta">最后编辑时间 {{ currentFile.lastModified }}</span>
-      </div>
-
       <!-- Monaco 编辑器 -->
       <div class="editor-container" ref="editorContainer"></div>
 
       <!-- 底部面板拖拽分割线 -->
       <div
-        v-if="isPanelOpen"
-        class="horizontal-resize-handle"
-        @mousedown="startPanelResize"
-        :class="{ 'is-resizing': isPanelResizing }"
+          v-if="isPanelOpen"
+          class="horizontal-resize-handle"
+          @mousedown="startPanelResize"
+          :class="{ 'is-resizing': isPanelResizing }"
       >
         <div class="horizontal-resize-handle-line"></div>
       </div>
@@ -146,13 +147,15 @@
       <!-- 底部面板 -->
       <div v-if="isPanelOpen" class="bottom-panel" :style="{ height: panelHeight + 'px' }">
         <div class="panel-tabs">
-          <button v-if="panelVisibility.terminal" :class="['panel-tab', { active: bottomPanel === 'terminal' }]" @click="togglePanel('terminal')" @dblclick="handlePanelDblClick('terminal')">
+          <button v-if="panelVisibility.terminal" :class="['panel-tab', { active: bottomPanel === 'terminal' }]"
+                  @click="togglePanel('terminal')" @dblclick="handlePanelDblClick('terminal')">
             <svg viewBox="0 0 16 16" width="14" height="14">
               <path fill="currentColor" d="M0 2v12h16V2H0zm1 1h14v10H1V3zm2 1v1h2V4H3zm3 0v1h7V4H6z"/>
             </svg>
             Terminal
           </button>
-          <button v-if="panelVisibility.problems" :class="['panel-tab', { active: bottomPanel === 'problems' }]" @click="togglePanel('problems')" @dblclick="handlePanelDblClick('problems')">
+          <button v-if="panelVisibility.problems" :class="['panel-tab', { active: bottomPanel === 'problems' }]"
+                  @click="togglePanel('problems')" @dblclick="handlePanelDblClick('problems')">
             <svg viewBox="0 0 16 16" width="14" height="14">
               <path fill="currentColor" d="M8 1a7 7 0 100 14A7 7 0 008 1zM7 11V9h2v2H7zm0-4V4h2v3H7z"/>
             </svg>
@@ -161,7 +164,9 @@
           <div class="panel-actions">
             <button class="panel-action-btn" @click="closePanel" title="关闭所有面板">
               <svg viewBox="0 0 16 16" width="14" height="14">
-                <path d="M12.207 3.793l-1.414-1.414L8 5.172 5.207 2.379 3.793 3.793 6.586 6.586 3.793 9.379l1.414 1.414L8 7.999l2.793 2.794 1.414-1.414L9.414 6.586z" fill="currentColor"/>
+                <path
+                    d="M12.207 3.793l-1.414-1.414L8 5.172 5.207 2.379 3.793 3.793 6.586 6.586 3.793 9.379l1.414 1.414L8 7.999l2.793 2.794 1.414-1.414L9.414 6.586z"
+                    fill="currentColor"/>
               </svg>
             </button>
           </div>
@@ -186,12 +191,14 @@
 
       <!-- 已关闭面板的图标栏（始终显示） -->
       <div class="minimized-panel-bar">
-        <button v-if="!panelVisibility.terminal" class="minimized-panel-btn" @click="togglePanel('terminal')" title="Terminal">
+        <button v-if="!panelVisibility.terminal" class="minimized-panel-btn" @click="togglePanel('terminal')"
+                title="Terminal">
           <svg viewBox="0 0 16 16" width="16" height="16">
             <path fill="currentColor" d="M0 2v12h16V2H0zm1 1h14v10H1V3zm2 1v1h2V4H3zm3 0v1h7V4H6z"/>
           </svg>
         </button>
-        <button v-if="!panelVisibility.problems" class="minimized-panel-btn" @click="togglePanel('problems')" title="Problems">
+        <button v-if="!panelVisibility.problems" class="minimized-panel-btn" @click="togglePanel('problems')"
+                title="Problems">
           <svg viewBox="0 0 16 16" width="16" height="16">
             <path fill="currentColor" d="M8 1a7 7 0 100 14A7 7 0 008 1zM7 11V9h2v2H7zm0-4V4h2v3H7z"/>
           </svg>
@@ -207,7 +214,9 @@
           <h3 class="dialog-title">关于</h3>
           <button class="dialog-close" @click="showAboutDialog = false">
             <svg viewBox="0 0 24 24" width="20" height="20">
-              <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" fill="currentColor"/>
+              <path
+                  d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
+                  fill="currentColor"/>
             </svg>
           </button>
         </div>
@@ -230,7 +239,8 @@
           </div>
           <div class="about-section">
             <label class="about-label">描述</label>
-            <textarea v-model="currentFile.description" class="about-textarea" placeholder="输入策略/指标/库的描述信息" rows="4"></textarea>
+            <textarea v-model="currentFile.description" class="about-textarea" placeholder="输入策略/指标/库的描述信息"
+                      rows="4"></textarea>
           </div>
         </div>
         <div class="dialog-footer">
@@ -243,7 +253,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import {ref, computed, onMounted, onUnmounted} from 'vue';
 import * as monaco from 'monaco-editor';
 
 // 配置 Monaco 环境，禁用 Web Workers
@@ -252,7 +262,7 @@ const workerBlob = new Blob([`
   self.onmessage = function() {
     // 最小化 worker，不执行任何操作
   };
-`], { type: 'application/javascript' });
+`], {type: 'application/javascript'});
 const workerUrl = URL.createObjectURL(workerBlob);
 
 (self as any).MonacoEnvironment = {
@@ -344,7 +354,7 @@ const libraryFiles = ref<CodeFile[]>([
 
 const currentFile = ref<CodeFile | null>(null);
 const editorContainer = ref<HTMLDivElement>();
-const bottomPanel = ref<'terminal' | 'problems' | null>('problems');
+const bottomPanel = ref<'terminal' | 'problems' | null>('terminal');
 const showAboutDialog = ref(false);
 
 // 控制每个面板的可见性
@@ -365,7 +375,7 @@ const startSidebarX = ref(0);
 const startSidebarWidth = ref(0);
 
 // 底部面板拖拽相关状态
-const panelHeight = ref(200);
+const panelHeight = ref(120);
 const isPanelResizing = ref(false);
 const startPanelY = ref(0);
 const startPanelHeight = ref(0);
@@ -387,8 +397,8 @@ const hasClosedPanels = computed(() => !panelVisibility.value.terminal || !panel
 // 计算是否所有分类都折叠
 const allCollapsed = computed(() => {
   return !categoryExpanded.value.indicator &&
-         !categoryExpanded.value.strategy &&
-         !categoryExpanded.value.library;
+      !categoryExpanded.value.strategy &&
+      !categoryExpanded.value.library;
 });
 
 const terminalOutput = ref<string[]>([
@@ -396,7 +406,7 @@ const terminalOutput = ref<string[]>([
   '> Python 3.11.0 已就绪'
 ]);
 const problems = ref<Problem[]>([
-  { message: '未定义的变量: symbol', line: 4, column: 16, severity: 'error' }
+  {message: '未定义的变量: symbol', line: 4, column: 16, severity: 'error'}
 ]);
 
 let editor: monaco.editor.IStandaloneCodeEditor | null = null;
@@ -602,7 +612,7 @@ onMounted(() => {
       language: 'python',
       theme: 'vs',
       fontSize: 14,
-      minimap: { enabled: true },
+      minimap: {enabled: true},
       automaticLayout: false, // 禁用自动布局，手动控制
       scrollBeyondLastLine: false,
       lineNumbers: 'on',
@@ -631,8 +641,8 @@ onMounted(() => {
       if (editor && editorContainer.value) {
         const width = editorContainer.value.clientWidth;
         const height = editorContainer.value.clientHeight;
-        console.log('Editor layout update:', { width, height });
-        editor.layout({ width, height });
+        console.log('Editor layout update:', {width, height});
+        editor.layout({width, height});
       }
     };
 
@@ -644,10 +654,10 @@ onMounted(() => {
     // 添加 ResizeObserver 监听容器尺寸变化
     resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
-        const { width, height } = entry.contentRect;
-        console.log('Container resized:', { width, height });
+        const {width, height} = entry.contentRect;
+        console.log('Container resized:', {width, height});
         if (editor && width > 0 && height > 0) {
-          editor.layout({ width, height });
+          editor.layout({width, height});
         }
       }
     });
@@ -884,11 +894,20 @@ onUnmounted(() => {
 .editor-toolbar {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  padding: 8px 16px;
-  background: #ffffff;
+  justify-content: space-between;
+  padding: 6px 16px;
+  background: #f8f9fa;
   border-bottom: 1px solid #e0e3eb;
-  height: 48px;
+  height: 36px;
+  gap: 16px;
+}
+
+.file-info-section {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 12px;
+  flex: 1;
 }
 
 .toolbar-left {
@@ -909,15 +928,15 @@ onUnmounted(() => {
 
 .toolbar-right {
   display: flex;
-  gap: 12px;
+  gap: 8px;
 }
 
 .tool-btn {
-  padding: 8px 20px;
+  padding: 4px 12px;
   background: #ffffff;
   border: 1px solid #e0e3eb;
-  border-radius: 8px;
-  font-size: 13px;
+  border-radius: 6px;
+  font-size: 12px;
   font-weight: 500;
   color: #3b4252;
   cursor: pointer;
@@ -953,7 +972,7 @@ onUnmounted(() => {
 }
 
 .tool-btn.more {
-  padding: 8px 16px;
+  padding: 4px 10px;
 }
 
 .file-info-bar {

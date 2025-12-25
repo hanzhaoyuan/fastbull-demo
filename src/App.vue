@@ -6,8 +6,8 @@
         <svg viewBox="0 0 32 32" width="32" height="32">
           <defs>
             <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" style="stop-color:#8B5CF6;stop-opacity:1" />
-              <stop offset="100%" style="stop-color:#EC4899;stop-opacity:1" />
+              <stop offset="0%" style="stop-color:#8B5CF6;stop-opacity:1"/>
+              <stop offset="100%" style="stop-color:#EC4899;stop-opacity:1"/>
             </linearGradient>
           </defs>
           <circle cx="16" cy="16" r="14" fill="url(#logoGradient)"/>
@@ -16,32 +16,38 @@
       </div>
       <div class="sidebar-icon" title="交易">
         <svg viewBox="0 0 24 24" width="24" height="24">
-          <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z" fill="none" stroke="currentColor" stroke-width="2"/>
+          <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z" fill="none" stroke="currentColor"
+                stroke-width="2"/>
         </svg>
         <span class="sidebar-label">交易</span>
       </div>
       <div class="sidebar-icon" title="行情">
         <svg viewBox="0 0 24 24" width="24" height="24">
-          <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z" fill="currentColor"/>
+          <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"
+                fill="currentColor"/>
         </svg>
         <span class="sidebar-label">行情</span>
       </div>
       <div class="sidebar-icon" title="跟单">
         <svg viewBox="0 0 24 24" width="24" height="24">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z" fill="currentColor"/>
+          <path
+              d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"
+              fill="currentColor"/>
         </svg>
         <span class="sidebar-label">跟单</span>
       </div>
       <div class="sidebar-icon badge" title="比赛">
         <svg viewBox="0 0 24 24" width="24" height="24">
-          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="currentColor"/>
+          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+                fill="currentColor"/>
         </svg>
         <span class="badge-count">1</span>
         <span class="sidebar-label">比赛</span>
       </div>
       <div class="sidebar-icon" title="资讯">
         <svg viewBox="0 0 24 24" width="24" height="24">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/>
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"
+                fill="currentColor"/>
         </svg>
         <span class="sidebar-label">资讯</span>
       </div>
@@ -53,7 +59,9 @@
       </div>
       <div class="sidebar-icon" title="日历">
         <svg viewBox="0 0 24 24" width="24" height="24">
-          <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11z" fill="currentColor"/>
+          <path
+              d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11z"
+              fill="currentColor"/>
         </svg>
         <span class="sidebar-label">日历</span>
       </div>
@@ -66,7 +74,8 @@
     </aside>
 
     <!-- 主内容区 -->
-    <main class="main-content" :class="{ 'bottom-maximized': isBottomMaximized, 'bottom-minimized': isBottomMinimized }">
+    <main class="main-content"
+          :class="{ 'bottom-maximized': isBottomMaximized, 'bottom-minimized': isBottomMinimized }">
       <!-- 顶部工具栏-->
       <div class="top-toolbar">
         <div class="toolbar-left">
@@ -78,7 +87,9 @@
           </button>
           <button class="toolbar-btn icon-btn">
             <svg viewBox="0 0 24 24" width="20" height="20">
-              <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" fill="currentColor"/>
+              <path
+                  d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"
+                  fill="currentColor"/>
             </svg>
           </button>
           <button class="toolbar-btn icon-btn">
@@ -92,7 +103,8 @@
         </div>
 
         <div class="toolbar-center">
-          <button v-for="tf in timeframes" :key="tf" :class="['timeframe-btn', { active: selectedTimeframe === tf }]" @click="selectedTimeframe = tf">
+          <button v-for="tf in timeframes" :key="tf" :class="['timeframe-btn', { active: selectedTimeframe === tf }]"
+                  @click="selectedTimeframe = tf">
             {{ tf }}
           </button>
           <button class="timeframe-btn dropdown">
@@ -121,7 +133,9 @@
           </button>
           <button class="toolbar-btn icon-btn">
             <svg viewBox="0 0 24 24" width="20" height="20">
-              <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" fill="currentColor"/>
+              <path
+                  d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"
+                  fill="currentColor"/>
             </svg>
           </button>
           <button class="toolbar-btn icon-btn">
@@ -168,7 +182,9 @@
           </button>
           <button class="tool-btn">
             <svg viewBox="0 0 24 24" width="20" height="20">
-              <path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z" fill="currentColor"/>
+              <path
+                  d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z"
+                  fill="currentColor"/>
             </svg>
           </button>
           <button class="tool-btn">
@@ -178,7 +194,8 @@
           </button>
           <button class="tool-btn">
             <svg viewBox="0 0 24 24" width="20" height="20">
-              <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" fill="currentColor"/>
+              <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"
+                    fill="currentColor"/>
             </svg>
           </button>
           <button class="tool-btn">
@@ -189,14 +206,14 @@
         </div>
 
         <!-- 图表容器 -->
-        <ChartContainer :timeframe="selectedTimeframe" />
+        <ChartContainer :timeframe="selectedTimeframe"/>
       </div>
 
       <!-- 拖拽分割线 -->
       <div
-        class="resize-handle"
-        @mousedown="startResize"
-        :class="{ 'is-resizing': isResizing }"
+          class="resize-handle"
+          @mousedown="startResize"
+          :class="{ 'is-resizing': isResizing }"
       >
         <div class="resize-handle-line"></div>
       </div>
@@ -206,12 +223,16 @@
         <div class="bottom-tabs">
           <button class="tab-btn" @click="activeTab = 'account'">
             <svg viewBox="0 0 24 24" width="16" height="16">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" fill="currentColor"/>
+              <path
+                  d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"
+                  fill="currentColor"/>
             </svg>
             添加交易账户
           </button>
-          <button class="tab-btn" :class="{ active: activeTab === 'positions' }" @click="activeTab = 'positions'">持仓</button>
-          <button class="tab-btn" :class="{ active: activeTab === 'history' }" @click="activeTab = 'history'">历史</button>
+          <button class="tab-btn" :class="{ active: activeTab === 'positions' }" @click="activeTab = 'positions'">持仓
+          </button>
+          <button class="tab-btn" :class="{ active: activeTab === 'history' }" @click="activeTab = 'history'">历史
+          </button>
           <button class="tab-btn" :class="{ active: activeTab === 'openAccount' }" @click="activeTab = 'openAccount'">
             <svg viewBox="0 0 24 24" width="14" height="14" style="margin-right: 4px;">
               <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
@@ -219,8 +240,11 @@
             </svg>
             开户
           </button>
-          <button class="tab-btn" :class="{ active: activeTab === 'strategy' }" @click="activeTab = 'strategy'">策略</button>
-          <button class="tab-btn" :class="{ active: activeTab === 'quantitative' }" @click="activeTab = 'quantitative'">量化</button>
+          <button class="tab-btn" :class="{ active: activeTab === 'strategy' }" @click="activeTab = 'strategy'">策略
+          </button>
+          <button class="tab-btn" :class="{ active: activeTab === 'quantitative' }" @click="activeTab = 'quantitative'">
+            量化
+          </button>
           <button class="tab-btn" :class="{ active: activeTab === 'logs' }" @click="activeTab = 'logs'">日志</button>
           <div class="tab-actions">
             <button class="action-btn" @click="toggleMinimize" title="最小化显示">
@@ -242,30 +266,32 @@
           <div v-if="activeTab === 'positions'" class="positions-table">
             <table>
               <thead>
-                <tr>
-                  <th>商品</th>
-                  <th>方向</th>
-                  <th>手数</th>
-                  <th>开仓价</th>
-                  <th>当前价</th>
-                  <th>止损</th>
-                  <th>止盈</th>
-                  <th>盈亏</th>
-                  <th>操作</th>
-                </tr>
+              <tr>
+                <th>商品</th>
+                <th>方向</th>
+                <th>手数</th>
+                <th>开仓价</th>
+                <th>当前价</th>
+                <th>止损</th>
+                <th>止盈</th>
+                <th>盈亏</th>
+                <th>操作</th>
+              </tr>
               </thead>
               <tbody>
-                <tr class="empty-state">
-                  <td colspan="9">
-                    <div class="empty-message">
-                      <svg viewBox="0 0 24 24" width="48" height="48">
-                        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z" fill="currentColor" opacity="0.3"/>
-                      </svg>
-                      <p>暂无持仓</p>
-                      <span>开始交易后，您的持仓信息将显示在这里</span>
-                    </div>
-                  </td>
-                </tr>
+              <tr class="empty-state">
+                <td colspan="9">
+                  <div class="empty-message">
+                    <svg viewBox="0 0 24 24" width="48" height="48">
+                      <path
+                          d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z"
+                          fill="currentColor" opacity="0.3"/>
+                    </svg>
+                    <p>暂无持仓</p>
+                    <span>开始交易后，您的持仓信息将显示在这里</span>
+                  </div>
+                </td>
+              </tr>
               </tbody>
             </table>
           </div>
@@ -274,29 +300,31 @@
           <div v-if="activeTab === 'history'" class="positions-table">
             <table>
               <thead>
-                <tr>
-                  <th>时间</th>
-                  <th>商品</th>
-                  <th>方向</th>
-                  <th>手数</th>
-                  <th>开仓价</th>
-                  <th>平仓价</th>
-                  <th>盈亏</th>
-                  <th>备注</th>
-                </tr>
+              <tr>
+                <th>时间</th>
+                <th>商品</th>
+                <th>方向</th>
+                <th>手数</th>
+                <th>开仓价</th>
+                <th>平仓价</th>
+                <th>盈亏</th>
+                <th>备注</th>
+              </tr>
               </thead>
               <tbody>
-                <tr class="empty-state">
-                  <td colspan="8">
-                    <div class="empty-message">
-                      <svg viewBox="0 0 24 24" width="48" height="48">
-                        <path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z" fill="currentColor" opacity="0.3"/>
-                      </svg>
-                      <p>暂无历史记录</p>
-                      <span>您的交易历史将显示在这里</span>
-                    </div>
-                  </td>
-                </tr>
+              <tr class="empty-state">
+                <td colspan="8">
+                  <div class="empty-message">
+                    <svg viewBox="0 0 24 24" width="48" height="48">
+                      <path
+                          d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"
+                          fill="currentColor" opacity="0.3"/>
+                    </svg>
+                    <p>暂无历史记录</p>
+                    <span>您的交易历史将显示在这里</span>
+                  </div>
+                </td>
+              </tr>
               </tbody>
             </table>
           </div>
@@ -305,7 +333,9 @@
           <div v-if="activeTab === 'openAccount'" class="account-panel">
             <div class="empty-message">
               <svg viewBox="0 0 24 24" width="48" height="48">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" fill="currentColor" opacity="0.3"/>
+                <path
+                    d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"
+                    fill="currentColor" opacity="0.3"/>
               </svg>
               <p>开立交易账户</p>
               <span>点击下方按钮开始开户流程</span>
@@ -317,7 +347,9 @@
           <div v-if="activeTab === 'strategy'" class="strategy-panel">
             <div class="empty-message">
               <svg viewBox="0 0 24 24" width="48" height="48">
-                <path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z" fill="currentColor" opacity="0.3"/>
+                <path
+                    d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z"
+                    fill="currentColor" opacity="0.3"/>
               </svg>
               <p>交易策略</p>
               <span>在这里编写和管理您的交易策略</span>
@@ -326,14 +358,16 @@
 
           <!-- 量化 -->
           <div v-if="activeTab === 'quantitative'" class="quantitative-panel">
-            <QuantitativeEditor />
+            <QuantitativeEditor/>
           </div>
 
           <!-- 日志 -->
           <div v-if="activeTab === 'logs'" class="logs-panel">
             <div class="empty-message">
               <svg viewBox="0 0 24 24" width="48" height="48">
-                <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" fill="currentColor" opacity="0.3"/>
+                <path
+                    d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"
+                    fill="currentColor" opacity="0.3"/>
               </svg>
               <p>系统日志</p>
               <span>查看系统运行日志和交易记录</span>
@@ -344,7 +378,9 @@
           <div v-if="activeTab === 'account'" class="account-panel">
             <div class="empty-message">
               <svg viewBox="0 0 24 24" width="48" height="48">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z" fill="currentColor" opacity="0.3"/>
+                <path
+                    d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"
+                    fill="currentColor" opacity="0.3"/>
               </svg>
               <p>添加交易账户</p>
               <span>连接您的交易账户以开始交易</span>
@@ -365,7 +401,9 @@
             </svg>
             <span class="status-ping">
               <svg viewBox="0 0 24 24" width="16" height="16">
-                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="#26a69a"/>
+                <path
+                    d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"
+                    fill="#26a69a"/>
               </svg>
               211ms
             </span>
@@ -377,7 +415,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from 'vue';
+import {ref, onMounted, onBeforeUnmount} from 'vue';
 import ChartContainer from './components/ChartContainer.vue';
 import QuantitativeEditor from './components/QuantitativeEditor.vue';
 

@@ -5,10 +5,10 @@
       <div class="section-label">时间周期</div>
       <div class="button-group">
         <button
-          v-for="interval in intervals"
-          :key="interval.value"
-          :class="['btn', { active: selectedInterval === interval.value }]"
-          @click="$emit('interval-change', interval.value)"
+            v-for="interval in intervals"
+            :key="interval.value"
+            :class="['btn', { active: selectedInterval === interval.value }]"
+            @click="$emit('interval-change', interval.value)"
         >
           {{ interval.label }}
         </button>
@@ -20,14 +20,14 @@
       <div class="section-label">图表类型</div>
       <div class="button-group">
         <button
-          :class="['btn', { active: chartType === 'candlestick' }]"
-          @click="$emit('chart-type-change', 'candlestick')"
+            :class="['btn', { active: chartType === 'candlestick' }]"
+            @click="$emit('chart-type-change', 'candlestick')"
         >
           K线图
         </button>
         <button
-          :class="['btn', { active: chartType === 'line' }]"
-          @click="$emit('chart-type-change', 'line')"
+            :class="['btn', { active: chartType === 'line' }]"
+            @click="$emit('chart-type-change', 'line')"
         >
           折线图
         </button>
@@ -51,7 +51,9 @@
       <div class="button-group">
         <button class="btn tool-btn">
           <svg class="icon" viewBox="0 0 24 24">
-            <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" fill="currentColor"/>
+            <path
+                d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"
+                fill="currentColor"/>
           </svg>
         </button>
         <button class="btn tool-btn">
@@ -61,7 +63,8 @@
         </button>
         <button class="btn tool-btn">
           <svg class="icon" viewBox="0 0 24 24">
-            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z" fill="currentColor"/>
+            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z"
+                  fill="currentColor"/>
           </svg>
         </button>
       </div>
@@ -70,7 +73,7 @@
 </template>
 
 <script setup lang="ts">
-import { TIME_INTERVALS, type TimeInterval } from '../services/MockDataService';
+import {TIME_INTERVALS, type TimeInterval} from '../services/MockDataService';
 
 defineProps<{
   selectedInterval: string;
