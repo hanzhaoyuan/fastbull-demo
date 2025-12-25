@@ -140,7 +140,7 @@
       <!-- 欢迎页面（无文件打开时） -->
       <div v-if="!currentFile" class="welcome-page">
         <div class="welcome-content">
-          <svg viewBox="0 0 64 64" width="64" height="64" style="margin-bottom: 20px;">
+          <svg viewBox="0 0 54 54" width="54" height="54" style="margin-bottom: 0px;">
             <path d="M32 8l-4 4-4-4-4 4-4-4-4 4-4-4v40l4-4 4 4 4-4 4 4 4-4 4 4 4-4 4 4V8l-4 4-4-4-4 4z" fill="none" stroke="#76808f" stroke-width="2"/>
             <line x1="16" y1="20" x2="48" y2="20" stroke="#76808f" stroke-width="2"/>
             <line x1="16" y1="28" x2="48" y2="28" stroke="#76808f" stroke-width="2"/>
@@ -229,8 +229,8 @@
         </div>
       </div>
 
-      <!-- 已关闭面板的图标栏（始终显示） -->
-      <div class="minimized-panel-bar">
+      <!-- 已关闭面板的图标栏（仅在打开文件时显示） -->
+      <div v-if="currentFile" class="minimized-panel-bar">
         <button v-if="!panelVisibility.terminal" class="minimized-panel-btn" @click="togglePanel('terminal')"
                 title="Terminal">
           <svg viewBox="0 0 16 16" width="16" height="16">
@@ -1901,6 +1901,7 @@ onUnmounted(() => {
   justify-content: center;
   background: #ffffff;
   min-height: 0;
+  overflow: auto;
 }
 
 .welcome-content {
@@ -1910,16 +1911,16 @@ onUnmounted(() => {
 }
 
 .welcome-title {
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 600;
   color: #3b4252;
-  margin: 0 0 12px 0;
+  margin: 0 0 5px 0;
 }
 
 .welcome-subtitle {
   font-size: 14px;
   color: #76808f;
-  margin: 0 0 32px 0;
+  margin: 0 0 17px 0;
   line-height: 1.6;
 }
 
