@@ -535,7 +535,7 @@
 </template>
 
 <script setup lang="ts">
-import {ref, computed, onMounted, onUnmounted, nextTick} from 'vue';
+import {ref, computed, onMounted, onUnmounted} from 'vue';
 import * as monaco from 'monaco-editor';
 import { quantAgentService, AgentStatus } from '../services/QuantAgentService';
 
@@ -679,8 +679,8 @@ const isCheckingAgent = ref(false);
 
 // 控制每个面板的可见性（默认都关闭）
 const panelVisibility = ref({
-  terminal: false,
-  problems: false
+  terminal: true,
+  problems: true
 });
 const categoryExpanded = ref({
   indicator: false,
