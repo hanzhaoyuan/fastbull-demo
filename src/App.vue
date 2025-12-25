@@ -45,11 +45,11 @@
         </svg>
         <span class="sidebar-label">资讯</span>
       </div>
-      <div class="sidebar-icon" title="快讯">
+      <div class="sidebar-icon" title="快讯">
         <svg viewBox="0 0 24 24" width="24" height="24">
           <path d="M7 2v11h3v9l7-12h-4l4-8z" fill="currentColor"/>
         </svg>
-        <span class="sidebar-label">快讯</span>
+        <span class="sidebar-label">快讯</span>
       </div>
       <div class="sidebar-icon" title="日历">
         <svg viewBox="0 0 24 24" width="24" height="24">
