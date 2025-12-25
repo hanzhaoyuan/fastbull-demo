@@ -132,8 +132,42 @@
         </div>
       </div>
 
+      <!-- 欢迎页面（无文件打开时） -->
+      <div v-if="!currentFile" class="welcome-page">
+        <div class="welcome-content">
+          <svg viewBox="0 0 64 64" width="64" height="64" style="margin-bottom: 20px;">
+            <path d="M32 8l-4 4-4-4-4 4-4-4-4 4-4-4v40l4-4 4 4 4-4 4 4 4-4 4 4 4-4 4 4V8l-4 4-4-4-4 4z" fill="none" stroke="#76808f" stroke-width="2"/>
+            <line x1="16" y1="20" x2="48" y2="20" stroke="#76808f" stroke-width="2"/>
+            <line x1="16" y1="28" x2="48" y2="28" stroke="#76808f" stroke-width="2"/>
+            <line x1="16" y1="36" x2="40" y2="36" stroke="#76808f" stroke-width="2"/>
+          </svg>
+          <h3 class="welcome-title">欢迎使用量化编辑器</h3>
+          <p class="welcome-subtitle">从左侧选择一个文件开始编辑，或创建一个新文件</p>
+          <div class="welcome-actions">
+            <button class="welcome-btn" @click="addFile('indicator')">
+              <svg viewBox="0 0 24 24" width="20" height="20">
+                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" fill="currentColor"/>
+              </svg>
+              新建指标
+            </button>
+            <button class="welcome-btn" @click="addFile('strategy')">
+              <svg viewBox="0 0 24 24" width="20" height="20">
+                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" fill="currentColor"/>
+              </svg>
+              新建策略
+            </button>
+            <button class="welcome-btn" @click="addFile('library')">
+              <svg viewBox="0 0 24 24" width="20" height="20">
+                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" fill="currentColor"/>
+              </svg>
+              新建库
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- Monaco 编辑器 -->
-      <div class="editor-container" ref="editorContainer"></div>
+      <div v-if="currentFile" class="editor-container" ref="editorContainer"></div>
 
       <!-- 底部面板拖拽分割线 -->
       <div
@@ -209,7 +243,7 @@
     </div>
 
     <!-- 关于弹窗 -->
-    <div v-if="showAboutDialog" class="dialog-overlay" @click="showAboutDialog = false">
+    <div v-if="showAboutDialog && currentFile" class="dialog-overlay" @click="showAboutDialog = false">
       <div class="dialog-container" @click.stop>
         <div class="dialog-header">
           <h3 class="dialog-title">关于</h3>
@@ -237,6 +271,10 @@
           <div class="about-section">
             <label class="about-label">作者</label>
             <input :value="currentFile.author || '当前用户'" class="about-input" readonly>
+          </div>
+          <div class="about-section">
+            <label class="about-label">版本</label>
+            <input :value="currentFile.version || '1.0.0'" class="about-input" readonly>
           </div>
           <div class="about-section">
             <label class="about-label">描述</label>
@@ -300,7 +338,7 @@
                 v-model="newFileVersion"
                 class="about-input"
                 placeholder="例如：1.0.0"
-                @input="e => { if (!validateVersion(newFileVersion)) newFileVersion = newFileVersion.slice(0, -1) }"
+                @input="() => { if (!validateVersion(newFileVersion)) newFileVersion = newFileVersion.slice(0, -1) }"
                 maxlength="100"
               >
               <span class="input-hint">{{ newFileVersion.length }}/100 字符，仅支持文字、字母、数字、下划线、句号</span>
@@ -313,7 +351,7 @@
                 class="about-textarea"
                 placeholder="请输入文件介绍"
                 rows="3"
-                @input="e => { if (!validateDescription(newFileDescription)) newFileDescription = newFileDescription.slice(0, -1) }"
+                @input="() => { if (!validateDescription(newFileDescription)) newFileDescription = newFileDescription.slice(0, -1) }"
                 maxlength="300"
               ></textarea>
               <span class="input-hint">{{ newFileDescription.length }}/300 字符</span>
@@ -330,7 +368,7 @@
 </template>
 
 <script setup lang="ts">
-import {ref, computed, onMounted, onUnmounted} from 'vue';
+import {ref, computed, onMounted, onUnmounted, nextTick} from 'vue';
 import * as monaco from 'monaco-editor';
 
 // 配置 Monaco 环境，禁用 Web Workers
@@ -432,7 +470,7 @@ const libraryFiles = ref<CodeFile[]>([
 
 const currentFile = ref<CodeFile | null>(null);
 const editorContainer = ref<HTMLDivElement>();
-const bottomPanel = ref<'terminal' | 'problems' | null>('terminal');
+const bottomPanel = ref<'terminal' | 'problems' | null>(null);
 const showAboutDialog = ref(false);
 const showNewFileDialog = ref(false);
 const newFileType = ref<'indicator' | 'strategy' | 'library'>('indicator');
@@ -443,10 +481,10 @@ const newFileDescription = ref('');
 const showAdvancedOptions = ref(false);
 const fileNameError = ref('');
 
-// 控制每个面板的可见性
+// 控制每个面板的可见性（默认都关闭）
 const panelVisibility = ref({
-  terminal: true,
-  problems: true
+  terminal: false,
+  problems: false
 });
 const categoryExpanded = ref({
   indicator: false,
@@ -477,9 +515,6 @@ const MAX_PANEL_HEIGHT = 600;
 // 计算面板是否打开（至少有一个面板可见）
 const isPanelOpen = computed(() => panelVisibility.value.terminal || panelVisibility.value.problems);
 
-// 计算是否有被关闭的面板（用于显示底部图标栏）
-const hasClosedPanels = computed(() => !panelVisibility.value.terminal || !panelVisibility.value.problems);
-
 // 计算是否所有分类都折叠
 const allCollapsed = computed(() => {
   return !categoryExpanded.value.indicator &&
@@ -499,9 +534,64 @@ let editor: monaco.editor.IStandaloneCodeEditor | null = null;
 let resizeObserver: ResizeObserver | null = null;
 
 // 打开文件
-const openFile = (file: CodeFile) => {
+const openFile = async (file: CodeFile) => {
   currentFile.value = file;
-  if (editor) {
+
+  // 等待 DOM 更新，确保 editorContainer 已经渲染
+  await nextTick();
+
+  // 如果编辑器还未创建，则创建编辑器
+  if (!editor && editorContainer.value) {
+    editor = monaco.editor.create(editorContainer.value, {
+      value: file.content,
+      language: 'python',
+      theme: 'vs',
+      fontSize: 14,
+      minimap: {enabled: true},
+      automaticLayout: false,
+      scrollBeyondLastLine: false,
+      lineNumbers: 'on',
+      roundedSelection: false,
+      scrollbar: {
+        vertical: 'visible',
+        horizontal: 'visible'
+      },
+      colorDecorators: false,
+      links: false
+    });
+
+    // 监听内容变化
+    editor.onDidChangeModelContent(() => {
+      if (currentFile.value) {
+        currentFile.value.content = editor!.getValue();
+      }
+    });
+
+    // 初始化布局
+    const updateLayout = () => {
+      if (editor && editorContainer.value) {
+        const width = editorContainer.value.clientWidth;
+        const height = editorContainer.value.clientHeight;
+        editor.layout({width, height});
+      }
+    };
+
+    setTimeout(updateLayout, 0);
+    setTimeout(updateLayout, 100);
+    setTimeout(updateLayout, 300);
+
+    // 添加 ResizeObserver 监听容器尺寸变化
+    resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const {width, height} = entry.contentRect;
+        if (editor && width > 0 && height > 0) {
+          editor.layout({width, height});
+        }
+      }
+    });
+    resizeObserver.observe(editorContainer.value);
+  } else if (editor) {
+    // 编辑器已存在，只需要更新内容
     editor.setValue(file.content);
   }
 };
@@ -836,64 +926,7 @@ const stopPanelResize = () => {
 };
 
 onMounted(() => {
-  if (editorContainer.value) {
-    // 初始化 Monaco Editor - 禁用需要 worker 的功能来避免错误
-    editor = monaco.editor.create(editorContainer.value, {
-      value: indicatorFiles.value[0].content,
-      language: 'python',
-      theme: 'vs',
-      fontSize: 14,
-      minimap: {enabled: true},
-      automaticLayout: false, // 禁用自动布局，手动控制
-      scrollBeyondLastLine: false,
-      lineNumbers: 'on',
-      roundedSelection: false,
-      scrollbar: {
-        vertical: 'visible',
-        horizontal: 'visible'
-      },
-      // 禁用颜色装饰器（这个功能需要 worker）
-      colorDecorators: false,
-      // 禁用链接检测（这个功能也可能需要 worker）
-      links: false
-    });
-
-    currentFile.value = indicatorFiles.value[0];
-
-    // 监听内容变化
-    editor.onDidChangeModelContent(() => {
-      if (currentFile.value) {
-        currentFile.value.content = editor!.getValue();
-      }
-    });
-
-    // 初始化布局函数
-    const updateLayout = () => {
-      if (editor && editorContainer.value) {
-        const width = editorContainer.value.clientWidth;
-        const height = editorContainer.value.clientHeight;
-        console.log('Editor layout update:', {width, height});
-        editor.layout({width, height});
-      }
-    };
-
-    // 多次尝试初始化布局，确保容器已经渲染
-    setTimeout(updateLayout, 0);
-    setTimeout(updateLayout, 100);
-    setTimeout(updateLayout, 300);
-
-    // 添加 ResizeObserver 监听容器尺寸变化
-    resizeObserver = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const {width, height} = entry.contentRect;
-        console.log('Container resized:', {width, height});
-        if (editor && width > 0 && height > 0) {
-          editor.layout({width, height});
-        }
-      }
-    });
-    resizeObserver.observe(editorContainer.value);
-  }
+  // Monaco Editor 将在第一次打开文件时创建
 });
 
 onUnmounted(() => {
@@ -1256,6 +1289,72 @@ onUnmounted(() => {
   width: 100%;
   overflow: hidden;
 }
+
+/* 欢迎页面 */
+.welcome-page {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  min-height: 0;
+}
+
+.welcome-content {
+  text-align: center;
+  max-width: 500px;
+  padding: 40px;
+}
+
+.welcome-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #3b4252;
+  margin: 0 0 12px 0;
+}
+
+.welcome-subtitle {
+  font-size: 14px;
+  color: #76808f;
+  margin: 0 0 32px 0;
+  line-height: 1.6;
+}
+
+.welcome-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.welcome-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: #ffffff;
+  border: 1px solid #e0e3eb;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #3b4252;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.welcome-btn:hover {
+  background: #f8f9fa;
+  border-color: #2962ff;
+  color: #2962ff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(41, 98, 255, 0.15);
+}
+
+.welcome-btn:active {
+  transform: translateY(0);
+}
+
 
 /* 水平拖拽分割线 */
 .horizontal-resize-handle {
