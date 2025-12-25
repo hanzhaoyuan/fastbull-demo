@@ -531,11 +531,46 @@
         </div>
       </div>
     </div>
+
+    <!-- Agent 已运行提示对话框 -->
+    <div v-if="showAgentRunningDialog" class="dialog-overlay" @click="showAgentRunningDialog = false">
+      <div class="dialog-container" @click.stop>
+        <div class="dialog-header">
+          <h3 class="dialog-title">Agent 已运行中</h3>
+          <button class="dialog-close" @click="showAgentRunningDialog = false">
+            <svg viewBox="0 0 24 24" width="20" height="20">
+              <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" fill="currentColor"/>
+            </svg>
+          </button>
+        </div>
+        <div class="dialog-body">
+          <div class="agent-install-content">
+            <svg viewBox="0 0 48 48" width="64" height="64" style="color: #26a69a;">
+              <circle cx="24" cy="24" r="22" fill="none" stroke="currentColor" stroke-width="2"/>
+              <path d="M20 24l4 4 8-8" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+            </svg>
+            <p class="agent-install-title">Agent 已运行中</p>
+            <p class="agent-install-message">
+              Quant Agent 客户端正在运行中，可以开始回测任务。
+            </p>
+            <div class="agent-install-features" style="background: #f0f9ff; padding: 16px; border-radius: 8px; margin-top: 20px;">
+              <div style="color: #76808f; font-size: 13px; line-height: 1.6;">
+                <strong style="color: #3b4252;">TODO: 回测功能</strong><br>
+                回测功能正在开发中，敬请期待。
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="dialog-footer">
+          <button class="dialog-btn primary" @click="showAgentRunningDialog = false">知道了</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import {ref, computed, onMounted, onUnmounted} from 'vue';
+import {ref, computed, onMounted, onUnmounted, nextTick} from 'vue';
 import * as monaco from 'monaco-editor';
 import { quantAgentService, AgentStatus } from '../services/QuantAgentService';
 
@@ -674,13 +709,16 @@ const deleteConfirmFileName = ref('');
 // Agent 未安装提示对话框
 const showAgentNotInstalledDialog = ref(false);
 
+// Agent 已运行提示对话框
+const showAgentRunningDialog = ref(false);
+
 // Agent 状态检测中
 const isCheckingAgent = ref(false);
 
 // 控制每个面板的可见性（默认都关闭）
 const panelVisibility = ref({
-  terminal: true,
-  problems: true
+  terminal: false,
+  problems: false
 });
 const categoryExpanded = ref({
   indicator: false,
@@ -1297,30 +1335,44 @@ const backtest = async () => {
   terminalOutput.value.push('> 正在检测 Quant Agent...');
 
   try {
-    // 确保 Agent 正在运行
-    const result = await quantAgentService.ensureAgentRunning();
+    // 1. 先检测 Agent 状态
+    const status = await quantAgentService.checkAgentStatus();
 
-    if (result.success) {
-      // Agent 可用，发送回测任务
-      terminalOutput.value.push(`> ${result.message}`);
-      terminalOutput.value.push(`> 正在启动回测: ${currentFile.value.name}`);
-
-      // TODO: 实际发送回测任务
-      // const taskResponse = await quantAgentService.submitBacktestTask({
-      //   task_type: 'backtest',
-      //   strategy_id: currentFile.value.id,
-      //   params: { /* 回测参数 */ }
-      // });
-
-      terminalOutput.value.push('> 回测任务已提交，等待执行...');
-    } else {
-      // Agent 未安装
-      terminalOutput.value.push(`> ${result.message}`);
-
-      if (result.status === AgentStatus.NOT_INSTALLED) {
-        // 显示下载提示对话框
+    if (status === AgentStatus.RUNNING) {
+      // Agent 已经运行中，显示提示对话框
+      terminalOutput.value.push('> Agent 已运行中');
+      showAgentRunningDialog.value = true;
+    } else if (status === AgentStatus.STOPPED) {
+      // Agent 已安装但未运行，直接唤起
+      terminalOutput.value.push('> Agent 未运行，正在唤起...');
+      const launched = await quantAgentService.launchAgent();
+      
+      // 检查 Agent 是否启动成功（可能 launchAgent 返回 false 但 Agent 实际已启动）
+      let agentRunning = launched;
+      if (!launched) {
+        // 唤起后再次检测，可能 Agent 已经启动但检测时机不对
+        terminalOutput.value.push('> 等待 Agent 启动完成，再次检测...');
+        await new Promise(resolve => setTimeout(resolve, 2000)); // 额外等待 2 秒
+        
+        const finalStatus = await quantAgentService.checkAgentStatus();
+        agentRunning = (finalStatus === AgentStatus.RUNNING);
+      }
+      
+      if (agentRunning) {
+        // Agent 已经启动成功
+        terminalOutput.value.push('> Agent 已成功启动');
+        terminalOutput.value.push('> 正在启动回测: ' + currentFile.value.name);
+        // TODO: 回测功能
+        terminalOutput.value.push('> TODO: 回测功能');
+      } else {
+        // 确实无法启动，可能未安装
+        terminalOutput.value.push('> 错误: 无法启动 Agent，可能未安装');
         showAgentNotInstalledDialog.value = true;
       }
+    } else {
+      // Agent 未安装
+      terminalOutput.value.push('> 错误: Agent 未安装');
+      showAgentNotInstalledDialog.value = true;
     }
   } catch (error) {
     terminalOutput.value.push(`> 错误: ${error}`);
