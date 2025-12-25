@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quant Agent 检测测试</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .status-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .status-label {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .status-value {
+            font-size: 24px;
+            font-weight: 600;
+            padding: 10px 16px;
+            border-radius: 6px;
+            display: inline-block;
+        }
+
+        .status-running {
+            background: #e8f5e9;
+            color: #26a69a;
+        }
+
+        .status-stopped {
+            background: #fff3e0;
+            color: #ff9800;
+        }
+
+        .status-not-installed {
+            background: #ffebee;
+            color: #f44336;
+        }
+
+        .status-checking {
+            background: #e3f2fd;
+            color: #2196f3;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-primary {
+            background: #2962ff;
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #26a69a;
+            color: white;
+        }
+
+        .btn-outline {
+            background: white;
+            color: #2962ff;
+            border: 2px solid #2962ff;
+        }
+
+        .log-container {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            border-radius: 8px;
+            padding: 20px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .log-line {
+            margin-bottom: 4px;
+            line-height: 1.6;
+        }
+
+        .log-line.success {
+            color: #4ade80;
+        }
+
+        .log-line.error {
+            color: #f87171;
+        }
+
+        .log-line.info {
+            color: #60a5fa;
+        }
+
+        .info-section {
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .info-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .info-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .info-list li {
+            padding: 8px 0;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .info-list li::before {
+            content: "→";
+            color: #2962ff;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+
+        code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Quant Agent 检测测试</h1>
+    <p class="subtitle">测试本地 Agent 的检测、唤起和通信功能</p>
+
+    <div class="status-card">
+        <div class="status-label">当前状态</div>
+        <div id="status" class="status-value status-checking">检测中...</div>
+    </div>
+
+    <div class="button-group">
+        <button class="btn btn-primary" onclick="checkStatus()">🔍 检测 Agent 状态</button>
+        <button class="btn btn-secondary" onclick="launchAgent()">🚀 唤起 Agent</button>
+        <button class="btn btn-outline" onclick="testBacktest()">▶️ 测试回测</button>
+        <button class="btn btn-outline" onclick="clearLogs()">🗑️ 清空日志</button>
+    </div>
+
+    <div class="log-container" id="logs">
+        <div class="log-line">等待操作...</div>
+    </div>
+
+    <div class="info-section">
+        <div class="info-title">测试步骤</div>
+        <ul class="info-list">
+            <li>确保 quant-agent 服务已经运行在 <code>http://127.0.0.1:17633</code></li>
+            <li>点击 "检测 Agent 状态" 查看 Agent 是否正在运行</li>
+            <li>如果 Agent 未运行，点击 "唤起 Agent" 尝试通过协议唤起</li>
+            <li>点击 "测试回测" 发送一个测试任务到 Agent</li>
+        </ul>
+    </div>
+
+    <div class="info-section">
+        <div class="info-title">Agent 端口检查</div>
+        <ul class="info-list">
+            <li>Health 接口: <a href="http://127.0.0.1:17633/health" target="_blank">http://127.0.0.1:17633/health</a></li>
+            <li>API 文档: <a href="http://127.0.0.1:17633/docs" target="_blank">http://127.0.0.1:17633/docs</a></li>
+            <li>自定义协议: <code>quant-agent://launch</code></li>
+        </ul>
+    </div>
+</div>
+
+<script>
+    const AGENT_URL = 'http://127.0.0.1:17633';
+    const AGENT_PROTOCOL = 'quant-agent://launch';
+
+    function log(message, type = 'normal') {
+        const logsContainer = document.getElementById('logs');
+        const logLine = document.createElement('div');
+        logLine.className = `log-line ${type}`;
+        logLine.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+        logsContainer.appendChild(logLine);
+        logsContainer.scrollTop = logsContainer.scrollHeight;
+    }
+
+    function updateStatus(status, text) {
+        const statusEl = document.getElementById('status');
+        statusEl.className = `status-value status-${status}`;
+        statusEl.textContent = text;
+    }
+
+    function clearLogs() {
+        document.getElementById('logs').innerHTML = '<div class="log-line">日志已清空</div>';
+    }
+
+    async function checkStatus() {
+        log('开始检测 Agent 状态...', 'info');
+        updateStatus('checking', '检测中...');
+
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+            const response = await fetch(`${AGENT_URL}/health`, {
+                method: 'GET',
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.ok) {
+                    log(`✅ Agent 正在运行 - ${data.name} v${data.version}`, 'success');
+                    updateStatus('running', 'Agent 正在运行');
+                    return true;
+                }
+            }
+        } catch (error) {
+            log(`❌ Agent 未运行: ${error.message}`, 'error');
+            updateStatus('stopped', 'Agent 未运行');
+            return false;
+        }
+        return false;
+    }
+
+    async function launchAgent() {
+        log('尝试唤起 Agent...', 'info');
+
+        try {
+            // 尝试通过自定义协议唤起
+            window.location.href = AGENT_PROTOCOL;
+            log(`发送协议唤起请求: ${AGENT_PROTOCOL}`, 'info');
+
+            // 等待 2 秒
+            log('等待 Agent 启动中...', 'info');
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
+            // 再次检测
+            const isRunning = await checkStatus();
+            if (isRunning) {
+                log('✅ Agent 成功启动！', 'success');
+            } else {
+                log('⚠️ Agent 可能未安装或无法启动', 'error');
+                log('请确保已安装 Quant Agent 并注册了自定义协议', 'info');
+            }
+        } catch (error) {
+            log(`唤起失败: ${error.message}`, 'error');
+        }
+    }
+
+    async function testBacktest() {
+        log('开始回测测试...', 'info');
+
+        // 1. 先检测 Agent 状态
+        const isRunning = await checkStatus();
+        if (!isRunning) {
+            log('⚠️ Agent 未运行，尝试唤起...', 'info');
+            await launchAgent();
+
+            // 再次检测
+            const retryRunning = await checkStatus();
+            if (!retryRunning) {
+                log('❌ 无法启动 Agent，回测测试终止', 'error');
+                return;
+            }
+        }
+
+        // 2. 构造回测请求
+        const taskRequest = {
+            task_type: 'backtest',
+            strategy_id: 'test_strategy_001',
+            params: {
+                strategy_name: 'MAPlus.py',
+                start_date: '2024-01-01',
+                end_date: '2024-12-31',
+                initial_capital: 100000
+            }
+        };
+
+        log('提交回测任务...', 'info');
+        log(`任务参数: ${JSON.stringify(taskRequest, null, 2)}`, 'info');
+
+        try {
+            const response = await fetch(`${AGENT_URL}/tasks`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(taskRequest)
+            });
+
+            const data = await response.json();
+
+            if (response.status === 501) {
+                log('ℹ️ Agent 返回 501 Not Implemented（这是预期的）', 'info');
+            }
+
+            log(`任务响应: ${JSON.stringify(data, null, 2)}`, 'info');
+            log(`任务ID: ${data.task_id}`, 'success');
+            log(`状态: ${data.status}`, 'success');
+            log(`消息: ${data.message}`, 'success');
+
+        } catch (error) {
+            log(`❌ 回测失败: ${error.message}`, 'error');
+        }
+    }
+
+    // 页面加载时自动检测
+    window.onload = async () => {
+        log('页面加载完成，开始自动检测...', 'info');
+        await checkStatus();
+    };
+</script>
+</body>
+</html>

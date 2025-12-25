@@ -32,12 +32,13 @@
               :key="file.id"
               :class="['file-item', { active: currentFile?.id === file.id }]"
               @click="openFile(file)"
+              @contextmenu.prevent="showFileMenu(file, $event)"
           >
             <svg class="file-icon" viewBox="0 0 16 16" width="16" height="16">
               <path fill="currentColor" d="M4 0h5.5L14 4.5V16H2V0h2zm0 1v14h9V5h-4V1H4z"/>
             </svg>
             <span class="file-name">{{ file.name }}</span>
-            <button class="more-btn" @click.stop="showFileMenu(file)">...</button>
+            <button class="more-btn" @click.stop="showFileMenu(file, $event)">...</button>
           </div>
         </div>
       </div>
@@ -58,12 +59,13 @@
               :key="file.id"
               :class="['file-item', { active: currentFile?.id === file.id }]"
               @click="openFile(file)"
+              @contextmenu.prevent="showFileMenu(file, $event)"
           >
             <svg class="file-icon" viewBox="0 0 16 16" width="16" height="16">
               <path fill="currentColor" d="M4 0h5.5L14 4.5V16H2V0h2zm0 1v14h9V5h-4V1H4z"/>
             </svg>
             <span class="file-name">{{ file.name }}</span>
-            <button class="more-btn" @click.stop="showFileMenu(file)">...</button>
+            <button class="more-btn" @click.stop="showFileMenu(file, $event)">...</button>
           </div>
         </div>
       </div>
@@ -84,12 +86,13 @@
               :key="file.id"
               :class="['file-item', { active: currentFile?.id === file.id }]"
               @click="openFile(file)"
+              @contextmenu.prevent="showFileMenu(file, $event)"
           >
             <svg class="file-icon" viewBox="0 0 16 16" width="16" height="16">
               <path fill="currentColor" d="M4 0h5.5L14 4.5V16H2V0h2zm0 1v14h9V5h-4V1H4z"/>
             </svg>
             <span class="file-name">{{ file.name }}</span>
-            <button class="more-btn" @click.stop="showFileMenu(file)">...</button>
+            <button class="more-btn" @click.stop="showFileMenu(file, $event)">...</button>
           </div>
         </div>
       </div>
@@ -126,14 +129,50 @@
           <button class="tool-btn" @click="saveFile">保存</button>
           <button class="tool-btn" @click="checkCode">检查</button>
           <button v-if="currentFile.type === 'indicator'" class="tool-btn" @click="addIndicator">添加</button>
-          <button v-if="currentFile.type === 'strategy'" class="tool-btn" @click="backtest">回测</button>
+          <button v-if="currentFile.type === 'strategy'" class="tool-btn" @click="backtest" :disabled="isCheckingAgent">
+            {{ isCheckingAgent ? '检测中...' : '回测' }}
+          </button>
           <button v-if="currentFile.type === 'strategy'" class="tool-btn" @click="startStrategy">启动</button>
           <button class="tool-btn more">更多</button>
         </div>
       </div>
 
+      <!-- 欢迎页面（无文件打开时） -->
+      <div v-if="!currentFile" class="welcome-page">
+        <div class="welcome-content">
+          <svg viewBox="0 0 64 64" width="64" height="64" style="margin-bottom: 20px;">
+            <path d="M32 8l-4 4-4-4-4 4-4-4-4 4-4-4v40l4-4 4 4 4-4 4 4 4-4 4 4 4-4 4 4V8l-4 4-4-4-4 4z" fill="none" stroke="#76808f" stroke-width="2"/>
+            <line x1="16" y1="20" x2="48" y2="20" stroke="#76808f" stroke-width="2"/>
+            <line x1="16" y1="28" x2="48" y2="28" stroke="#76808f" stroke-width="2"/>
+            <line x1="16" y1="36" x2="40" y2="36" stroke="#76808f" stroke-width="2"/>
+          </svg>
+          <h3 class="welcome-title">欢迎使用量化编辑器</h3>
+          <p class="welcome-subtitle">从左侧选择一个文件开始编辑，或创建一个新文件</p>
+          <div class="welcome-actions">
+            <button class="welcome-btn" @click="addFile('indicator')">
+              <svg viewBox="0 0 24 24" width="20" height="20">
+                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" fill="currentColor"/>
+              </svg>
+              新建指标
+            </button>
+            <button class="welcome-btn" @click="addFile('strategy')">
+              <svg viewBox="0 0 24 24" width="20" height="20">
+                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" fill="currentColor"/>
+              </svg>
+              新建策略
+            </button>
+            <button class="welcome-btn" @click="addFile('library')">
+              <svg viewBox="0 0 24 24" width="20" height="20">
+                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" fill="currentColor"/>
+              </svg>
+              新建库
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- Monaco 编辑器 -->
-      <div class="editor-container" ref="editorContainer"></div>
+      <div v-if="currentFile" class="editor-container" ref="editorContainer"></div>
 
       <!-- 底部面板拖拽分割线 -->
       <div
@@ -209,7 +248,7 @@
     </div>
 
     <!-- 关于弹窗 -->
-    <div v-if="showAboutDialog" class="dialog-overlay" @click="showAboutDialog = false">
+    <div v-if="showAboutDialog && currentFile" class="dialog-overlay" @click="showAboutDialog = false">
       <div class="dialog-container" @click.stop>
         <div class="dialog-header">
           <h3 class="dialog-title">关于</h3>
@@ -237,6 +276,10 @@
           <div class="about-section">
             <label class="about-label">作者</label>
             <input :value="currentFile.author || '当前用户'" class="about-input" readonly>
+          </div>
+          <div class="about-section">
+            <label class="about-label">版本</label>
+            <input :value="currentFile.version || '1.0.0'" class="about-input" readonly>
           </div>
           <div class="about-section">
             <label class="about-label">描述</label>
@@ -300,7 +343,7 @@
                 v-model="newFileVersion"
                 class="about-input"
                 placeholder="例如：1.0.0"
-                @input="e => { if (!validateVersion(newFileVersion)) newFileVersion = newFileVersion.slice(0, -1) }"
+                @input="() => { if (!validateVersion(newFileVersion)) newFileVersion = newFileVersion.slice(0, -1) }"
                 maxlength="100"
               >
               <span class="input-hint">{{ newFileVersion.length }}/100 字符，仅支持文字、字母、数字、下划线、句号</span>
@@ -313,7 +356,7 @@
                 class="about-textarea"
                 placeholder="请输入文件介绍"
                 rows="3"
-                @input="e => { if (!validateDescription(newFileDescription)) newFileDescription = newFileDescription.slice(0, -1) }"
+                @input="() => { if (!validateDescription(newFileDescription)) newFileDescription = newFileDescription.slice(0, -1) }"
                 maxlength="300"
               ></textarea>
               <span class="input-hint">{{ newFileDescription.length }}/300 字符</span>
@@ -326,12 +369,175 @@
         </div>
       </div>
     </div>
+
+    <!-- 文件右键菜单 -->
+    <div
+      v-if="showContextMenu"
+      class="context-menu"
+      :style="{ top: contextMenuY + 'px', left: contextMenuX + 'px' }"
+      @click.stop
+    >
+      <div class="context-menu-item" @click="openFileFromMenu">
+        <svg viewBox="0 0 16 16" width="14" height="14">
+          <path fill="currentColor" d="M4 0h5.5L14 4.5V16H2V0h2zm0 1v14h9V5h-4V1H4z"/>
+        </svg>
+        打开
+      </div>
+      <div class="context-menu-item" @click="renameFile">
+        <svg viewBox="0 0 16 16" width="14" height="14">
+          <path fill="currentColor" d="M12.854 1.146a.5.5 0 0 0-.708 0L10.5 2.793 13.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708l-2-2zM10 3.5L1.5 12v2.5H4l8.5-8.5L10 3.5z"/>
+        </svg>
+        重命名
+      </div>
+      <div class="context-menu-item" @click="copyFile">
+        <svg viewBox="0 0 16 16" width="14" height="14">
+          <path fill="currentColor" d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V2zm2-1a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H6zM2 5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1h1v1a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1v1H2z"/>
+        </svg>
+        复制
+      </div>
+      <div class="context-menu-item" @click="pasteFile" :class="{ disabled: !clipboard }">
+        <svg viewBox="0 0 16 16" width="14" height="14">
+          <path fill="currentColor" d="M4.5 3a.5.5 0 0 0-.5.5V14a.5.5 0 0 0 .5.5h7a.5.5 0 0 0 .5-.5V3.5a.5.5 0 0 0-.5-.5h-7zM4 3.5A1.5 1.5 0 0 1 5.5 2h5A1.5 1.5 0 0 1 12 3.5V14a1.5 1.5 0 0 1-1.5 1.5h-7A1.5 1.5 0 0 1 2 14V3.5z"/>
+        </svg>
+        粘贴
+      </div>
+      <div class="context-menu-item" @click="downloadFile">
+        <svg viewBox="0 0 16 16" width="14" height="14">
+          <path fill="currentColor" d="M8.5 1.5A1.5 1.5 0 0 1 10 0h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h4a1.5 1.5 0 0 1 1.5 1.5v1H10v-1zM2 1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H2zm6.854 7.146l2 2a.5.5 0 0 1-.708.708L8.5 9.707V13.5a.5.5 0 0 1-1 0V9.707l-1.646 1.647a.5.5 0 0 1-.708-.708l2-2a.5.5 0 0 1 .708 0z"/>
+        </svg>
+        下载到本地
+      </div>
+      <div class="context-menu-divider"></div>
+      <div class="context-menu-item danger" @click="deleteFile">
+        <svg viewBox="0 0 16 16" width="14" height="14">
+          <path fill="currentColor" d="M6.5 1h3a.5.5 0 0 1 .5.5v1H6v-1a.5.5 0 0 1 .5-.5zM11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3A1.5 1.5 0 0 0 5 1.5v1H2.506a.58.58 0 0 0-.01 0H1.5a.5.5 0 0 0 0 1h.538l.853 10.66A2 2 0 0 0 4.885 16h6.23a2 2 0 0 0 1.994-1.84l.853-10.66h.538a.5.5 0 0 0 0-1h-.995a.59.59 0 0 0-.01 0H11zm1.958 1l-.846 10.58a1 1 0 0 1-.997.92h-6.23a1 1 0 0 1-.997-.92L3.042 3.5h9.916z"/>
+        </svg>
+        删除
+      </div>
+    </div>
+
+    <!-- 重命名对话框 -->
+    <div v-if="showRenameDialog" class="dialog-overlay" @click="showRenameDialog = false">
+      <div class="dialog-container" @click.stop>
+        <div class="dialog-header">
+          <h3 class="dialog-title">重命名文件</h3>
+          <button class="dialog-close" @click="showRenameDialog = false">
+            <svg viewBox="0 0 24 24" width="20" height="20">
+              <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" fill="currentColor"/>
+            </svg>
+          </button>
+        </div>
+        <div class="dialog-body">
+          <div class="about-section">
+            <label class="about-label">新文件名 <span class="required">*</span></label>
+            <input
+              v-model="renameFileName"
+              :class="['about-input', { 'input-error': renameFileNameError }]"
+              placeholder="请输入新文件名（不含 .py 扩展名）"
+              @input="validateRenameFileName"
+              @keyup.enter="confirmRename"
+              ref="renameInput"
+              maxlength="100"
+            >
+            <span v-if="renameFileNameError" class="error-message">{{ renameFileNameError }}</span>
+            <span class="input-hint">{{ renameFileName.length }}/100 字符，仅支持文字、字母、数字、下划线</span>
+          </div>
+        </div>
+        <div class="dialog-footer">
+          <button class="dialog-btn secondary" @click="showRenameDialog = false">取消</button>
+          <button class="dialog-btn primary" @click="confirmRename" :disabled="!!renameFileNameError || !renameFileName">确定</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 删除确认对话框 -->
+    <div v-if="showDeleteConfirmDialog" class="dialog-overlay" @click="showDeleteConfirmDialog = false">
+      <div class="dialog-container" @click.stop>
+        <div class="dialog-header">
+          <h3 class="dialog-title">删除文件</h3>
+          <button class="dialog-close" @click="showDeleteConfirmDialog = false">
+            <svg viewBox="0 0 24 24" width="20" height="20">
+              <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" fill="currentColor"/>
+            </svg>
+          </button>
+        </div>
+        <div class="dialog-body">
+          <div class="delete-confirm-content">
+            <svg viewBox="0 0 48 48" width="48" height="48" style="color: #f44336;">
+              <circle cx="24" cy="24" r="22" fill="none" stroke="currentColor" stroke-width="2"/>
+              <path d="M24 14v16M24 34v2" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+            </svg>
+            <p class="delete-confirm-message">
+              确定要删除文件 <strong>"{{ deleteConfirmFileName }}"</strong> 吗？
+            </p>
+            <p class="delete-confirm-warning">此操作无法撤销。</p>
+          </div>
+        </div>
+        <div class="dialog-footer">
+          <button class="dialog-btn secondary" @click="showDeleteConfirmDialog = false">取消</button>
+          <button class="dialog-btn danger" @click="confirmDelete">删除</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Agent 未安装提示对话框 -->
+    <div v-if="showAgentNotInstalledDialog" class="dialog-overlay" @click="showAgentNotInstalledDialog = false">
+      <div class="dialog-container" @click.stop>
+        <div class="dialog-header">
+          <h3 class="dialog-title">需要安装 Quant Agent</h3>
+          <button class="dialog-close" @click="showAgentNotInstalledDialog = false">
+            <svg viewBox="0 0 24 24" width="20" height="20">
+              <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" fill="currentColor"/>
+            </svg>
+          </button>
+        </div>
+        <div class="dialog-body">
+          <div class="agent-install-content">
+            <svg viewBox="0 0 48 48" width="64" height="64" style="color: #2962ff;">
+              <circle cx="24" cy="24" r="22" fill="none" stroke="currentColor" stroke-width="2"/>
+              <path d="M24 14v2M24 20v12" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+              <circle cx="24" cy="36" r="1.5" fill="currentColor"/>
+            </svg>
+            <p class="agent-install-title">需要本地 Quant Agent 支持</p>
+            <p class="agent-install-message">
+              回测功能需要在本地运行 Quant Agent 客户端。<br>
+              请先下载并安装 Quant Agent，然后重新点击回测。
+            </p>
+            <div class="agent-install-features">
+              <div class="feature-item">
+                <svg viewBox="0 0 16 16" width="16" height="16">
+                  <path fill="currentColor" d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/>
+                </svg>
+                本地执行，数据安全
+              </div>
+              <div class="feature-item">
+                <svg viewBox="0 0 16 16" width="16" height="16">
+                  <path fill="currentColor" d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/>
+                </svg>
+                高性能回测引擎
+              </div>
+              <div class="feature-item">
+                <svg viewBox="0 0 16 16" width="16" height="16">
+                  <path fill="currentColor" d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/>
+                </svg>
+                无需配置环境
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="dialog-footer">
+          <button class="dialog-btn secondary" @click="showAgentNotInstalledDialog = false">稍后再说</button>
+          <button class="dialog-btn primary" @click="downloadAgent">立即下载</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import {ref, computed, onMounted, onUnmounted} from 'vue';
+import {ref, computed, onMounted, onUnmounted, nextTick} from 'vue';
 import * as monaco from 'monaco-editor';
+import { quantAgentService, AgentStatus } from '../services/QuantAgentService';
 
 // 配置 Monaco 环境，禁用 Web Workers
 // 创建一个最小化的 worker blob，避免加载错误
@@ -432,7 +638,7 @@ const libraryFiles = ref<CodeFile[]>([
 
 const currentFile = ref<CodeFile | null>(null);
 const editorContainer = ref<HTMLDivElement>();
-const bottomPanel = ref<'terminal' | 'problems' | null>('terminal');
+const bottomPanel = ref<'terminal' | 'problems' | null>(null);
 const showAboutDialog = ref(false);
 const showNewFileDialog = ref(false);
 const newFileType = ref<'indicator' | 'strategy' | 'library'>('indicator');
@@ -443,10 +649,38 @@ const newFileDescription = ref('');
 const showAdvancedOptions = ref(false);
 const fileNameError = ref('');
 
-// 控制每个面板的可见性
+// 右键菜单相关状态
+const showContextMenu = ref(false);
+const contextMenuX = ref(0);
+const contextMenuY = ref(0);
+const contextMenuFile = ref<CodeFile | null>(null);
+
+// 重命名对话框状态
+const showRenameDialog = ref(false);
+const renameFileName = ref('');
+const renameFileNameError = ref('');
+const renameInput = ref<HTMLInputElement>();
+
+// 剪贴板（用于复制粘贴）
+const clipboard = ref<CodeFile | null>(null);
+
+// 当前选中的文件（用于键盘快捷键）
+const selectedFile = ref<CodeFile | null>(null);
+
+// 删除确认对话框状态
+const showDeleteConfirmDialog = ref(false);
+const deleteConfirmFileName = ref('');
+
+// Agent 未安装提示对话框
+const showAgentNotInstalledDialog = ref(false);
+
+// Agent 状态检测中
+const isCheckingAgent = ref(false);
+
+// 控制每个面板的可见性（默认都关闭）
 const panelVisibility = ref({
-  terminal: true,
-  problems: true
+  terminal: false,
+  problems: false
 });
 const categoryExpanded = ref({
   indicator: false,
@@ -477,9 +711,6 @@ const MAX_PANEL_HEIGHT = 600;
 // 计算面板是否打开（至少有一个面板可见）
 const isPanelOpen = computed(() => panelVisibility.value.terminal || panelVisibility.value.problems);
 
-// 计算是否有被关闭的面板（用于显示底部图标栏）
-const hasClosedPanels = computed(() => !panelVisibility.value.terminal || !panelVisibility.value.problems);
-
 // 计算是否所有分类都折叠
 const allCollapsed = computed(() => {
   return !categoryExpanded.value.indicator &&
@@ -499,9 +730,65 @@ let editor: monaco.editor.IStandaloneCodeEditor | null = null;
 let resizeObserver: ResizeObserver | null = null;
 
 // 打开文件
-const openFile = (file: CodeFile) => {
+const openFile = async (file: CodeFile) => {
+  selectedFile.value = file; // 设置选中文件
   currentFile.value = file;
-  if (editor) {
+
+  // 等待 DOM 更新，确保 editorContainer 已经渲染
+  await nextTick();
+
+  // 如果编辑器还未创建，则创建编辑器
+  if (!editor && editorContainer.value) {
+    editor = monaco.editor.create(editorContainer.value, {
+      value: file.content,
+      language: 'python',
+      theme: 'vs',
+      fontSize: 14,
+      minimap: {enabled: true},
+      automaticLayout: false,
+      scrollBeyondLastLine: false,
+      lineNumbers: 'on',
+      roundedSelection: false,
+      scrollbar: {
+        vertical: 'visible',
+        horizontal: 'visible'
+      },
+      colorDecorators: false,
+      links: false
+    });
+
+    // 监听内容变化
+    editor.onDidChangeModelContent(() => {
+      if (currentFile.value) {
+        currentFile.value.content = editor!.getValue();
+      }
+    });
+
+    // 初始化布局
+    const updateLayout = () => {
+      if (editor && editorContainer.value) {
+        const width = editorContainer.value.clientWidth;
+        const height = editorContainer.value.clientHeight;
+        editor.layout({width, height});
+      }
+    };
+
+    setTimeout(updateLayout, 0);
+    setTimeout(updateLayout, 100);
+    setTimeout(updateLayout, 300);
+
+    // 添加 ResizeObserver 监听容器尺寸变化
+    resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const {width, height} = entry.contentRect;
+        if (editor && width > 0 && height > 0) {
+          editor.layout({width, height});
+        }
+      }
+    });
+    resizeObserver.observe(editorContainer.value);
+  } else if (editor) {
+    // 编辑器已存在，只需要更新内容
     editor.setValue(file.content);
   }
 };
@@ -686,9 +973,290 @@ const createNewFile = () => {
   terminalOutput.value.push(`> 已创建新文件: ${fileName}`);
 };
 
-// 显示文件菜单
-const showFileMenu = (file: CodeFile) => {
-  console.log('Show menu for:', file.name);
+// 显示文件右键菜单
+const showFileMenu = (file: CodeFile, event?: MouseEvent) => {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  contextMenuFile.value = file;
+  selectedFile.value = file; // 同时设置选中文件
+
+  if (event) {
+    // 计算菜单位置，确保不超出视口
+    const menuWidth = 200;
+    const menuHeight = 220;
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    let x = event.clientX;
+    let y = event.clientY;
+
+    // 右边界检查
+    if (x + menuWidth > viewportWidth) {
+      x = viewportWidth - menuWidth - 10;
+    }
+
+    // 下边界检查
+    if (y + menuHeight > viewportHeight) {
+      y = viewportHeight - menuHeight - 10;
+    }
+
+    contextMenuX.value = x;
+    contextMenuY.value = y;
+  }
+
+  showContextMenu.value = true;
+};
+
+// 关闭右键菜单
+const closeContextMenu = () => {
+  showContextMenu.value = false;
+};
+
+// a. 打开文件（双击或右键菜单）
+const openFileFromMenu = () => {
+  if (contextMenuFile.value) {
+    openFile(contextMenuFile.value);
+  }
+  closeContextMenu();
+};
+
+// b. 重命名文件
+const renameFile = () => {
+  if (!contextMenuFile.value) return;
+
+  // 移除 .py 扩展名
+  const nameWithoutExt = contextMenuFile.value.name.replace(/\.py$/, '');
+  renameFileName.value = nameWithoutExt;
+  renameFileNameError.value = '';
+
+  closeContextMenu();
+  showRenameDialog.value = true;
+
+  // 等待对话框渲染后聚焦输入框
+  nextTick(() => {
+    renameInput.value?.focus();
+    renameInput.value?.select();
+  });
+};
+
+// 验证重命名文件名
+const validateRenameFileName = () => {
+  const name = renameFileName.value;
+  if (!name) {
+    renameFileNameError.value = '名称不能为空';
+    return false;
+  }
+  if (name.length > 100) {
+    renameFileNameError.value = '名称不能超过100个字符';
+    return false;
+  }
+  const validPattern = /^[\u4e00-\u9fa5a-zA-Z0-9_]+$/;
+  if (!validPattern.test(name)) {
+    renameFileNameError.value = '名称只能包含文字、字母、数字和下划线';
+    return false;
+  }
+
+  // 检查是否与现有文件重名
+  const newFileName = name + '.py';
+  const files = contextMenuFile.value?.type === 'indicator'
+    ? indicatorFiles.value
+    : contextMenuFile.value?.type === 'strategy'
+    ? strategyFiles.value
+    : libraryFiles.value;
+
+  const duplicate = files.some(f =>
+    f.name === newFileName && f.id !== contextMenuFile.value?.id
+  );
+
+  if (duplicate) {
+    renameFileNameError.value = '该名称已存在';
+    return false;
+  }
+
+  renameFileNameError.value = '';
+  return true;
+};
+
+// 确认重命名
+const confirmRename = () => {
+  if (!validateRenameFileName() || !contextMenuFile.value) return;
+
+  const oldName = contextMenuFile.value.name;
+  const newFileName = renameFileName.value + '.py';
+
+  contextMenuFile.value.name = newFileName;
+  contextMenuFile.value.lastModified = new Date().toLocaleString('zh-CN');
+
+  terminalOutput.value.push(`> 文件已重命名: ${oldName} → ${newFileName}`);
+  showRenameDialog.value = false;
+};
+
+// c. 复制文件（到剪贴板）
+const copyFile = () => {
+  if (!contextMenuFile.value) return;
+
+  clipboard.value = { ...contextMenuFile.value };
+  terminalOutput.value.push(`> 已复制: ${contextMenuFile.value.name}`);
+  closeContextMenu();
+};
+
+// c. 粘贴文件
+const pasteFile = () => {
+  if (!clipboard.value) {
+    terminalOutput.value.push('> 剪贴板为空，无法粘贴');
+    return;
+  }
+
+  const originalName = clipboard.value.name.replace(/\.py$/, '');
+  let copyNumber = 1;
+  let newName = `${originalName}_copy${copyNumber}.py`;
+
+  const files = clipboard.value.type === 'indicator'
+    ? indicatorFiles.value
+    : clipboard.value.type === 'strategy'
+    ? strategyFiles.value
+    : libraryFiles.value;
+
+  // 找到一个不重复的名字
+  while (files.some(f => f.name === newName)) {
+    copyNumber++;
+    newName = `${originalName}_copy${copyNumber}.py`;
+  }
+
+  const newFile: CodeFile = {
+    id: Date.now().toString(),
+    name: newName,
+    type: clipboard.value.type,
+    content: clipboard.value.content,
+    lastModified: new Date().toLocaleString('zh-CN'),
+    description: clipboard.value.description,
+    author: clipboard.value.author || '当前用户',
+    version: clipboard.value.version || '1.0.0',
+  };
+
+  if (newFile.type === 'indicator') {
+    indicatorFiles.value.push(newFile);
+  } else if (newFile.type === 'strategy') {
+    strategyFiles.value.push(newFile);
+  } else {
+    libraryFiles.value.push(newFile);
+  }
+
+  terminalOutput.value.push(`> 文件已粘贴: ${newName}`);
+  openFile(newFile); // 自动打开新文件
+  closeContextMenu();
+};
+
+// d. 下载到本地
+const downloadFile = () => {
+  if (!contextMenuFile.value) return;
+
+  const blob = new Blob([contextMenuFile.value.content], {
+    type: 'text/plain;charset=utf-8'
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = contextMenuFile.value.name;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  terminalOutput.value.push(`> 文件已下载: ${contextMenuFile.value.name}`);
+  closeContextMenu();
+};
+
+// e. 删除文件
+const deleteFile = () => {
+  if (!contextMenuFile.value) return;
+
+  deleteConfirmFileName.value = contextMenuFile.value.name;
+  closeContextMenu();
+  showDeleteConfirmDialog.value = true;
+};
+
+// 确认删除
+const confirmDelete = () => {
+  if (!contextMenuFile.value) return;
+
+  const fileName = contextMenuFile.value.name;
+  const fileId = contextMenuFile.value.id;
+
+  if (contextMenuFile.value.type === 'indicator') {
+    const index = indicatorFiles.value.findIndex(f => f.id === fileId);
+    if (index !== -1) {
+      indicatorFiles.value.splice(index, 1);
+    }
+  } else if (contextMenuFile.value.type === 'strategy') {
+    const index = strategyFiles.value.findIndex(f => f.id === fileId);
+    if (index !== -1) {
+      strategyFiles.value.splice(index, 1);
+    }
+  } else {
+    const index = libraryFiles.value.findIndex(f => f.id === fileId);
+    if (index !== -1) {
+      libraryFiles.value.splice(index, 1);
+    }
+  }
+
+  // 如果删除的是当前打开的文件，关闭编辑器
+  if (currentFile.value?.id === fileId) {
+    currentFile.value = null;
+    if (editor) {
+      editor.setValue('');
+    }
+  }
+
+  // 清空剪贴板（如果删除的是剪贴板中的文件）
+  if (clipboard.value?.id === fileId) {
+    clipboard.value = null;
+  }
+
+  terminalOutput.value.push(`> 文件已删除: ${fileName}`);
+  showDeleteConfirmDialog.value = false;
+};
+
+// 键盘快捷键处理
+const handleKeyDown = (e: KeyboardEvent) => {
+  // Ctrl+C: 复制
+  if (e.ctrlKey && e.key === 'c' && selectedFile.value) {
+    e.preventDefault();
+    contextMenuFile.value = selectedFile.value;
+    copyFile();
+  }
+
+  // Ctrl+V: 粘贴
+  if (e.ctrlKey && e.key === 'v') {
+    e.preventDefault();
+    pasteFile();
+  }
+
+  // Delete: 删除
+  if (e.key === 'Delete' && selectedFile.value) {
+    e.preventDefault();
+    contextMenuFile.value = selectedFile.value;
+    deleteFile();
+  }
+
+  // F2: 重命名
+  if (e.key === 'F2' && selectedFile.value) {
+    e.preventDefault();
+    contextMenuFile.value = selectedFile.value;
+    renameFile();
+  }
+
+  // Escape: 关闭菜单/对话框
+  if (e.key === 'Escape') {
+    if (showContextMenu.value) {
+      closeContextMenu();
+    } else if (showRenameDialog.value) {
+      showRenameDialog.value = false;
+    }
+  }
 };
 
 // 保存文件
@@ -713,9 +1281,59 @@ const addIndicator = () => {
 };
 
 // 回测
-const backtest = () => {
-  terminalOutput.value.push('> 启动回测...');
-  // TODO: 实现回测逻辑
+const backtest = async () => {
+  if (!currentFile.value) {
+    terminalOutput.value.push('> 错误: 未选择策略文件');
+    return;
+  }
+
+  if (currentFile.value.type !== 'strategy') {
+    terminalOutput.value.push('> 错误: 只能回测策略文件');
+    return;
+  }
+
+  // 显示检测状态
+  isCheckingAgent.value = true;
+  terminalOutput.value.push('> 正在检测 Quant Agent...');
+
+  try {
+    // 确保 Agent 正在运行
+    const result = await quantAgentService.ensureAgentRunning();
+
+    if (result.success) {
+      // Agent 可用，发送回测任务
+      terminalOutput.value.push(`> ${result.message}`);
+      terminalOutput.value.push(`> 正在启动回测: ${currentFile.value.name}`);
+
+      // TODO: 实际发送回测任务
+      // const taskResponse = await quantAgentService.submitBacktestTask({
+      //   task_type: 'backtest',
+      //   strategy_id: currentFile.value.id,
+      //   params: { /* 回测参数 */ }
+      // });
+
+      terminalOutput.value.push('> 回测任务已提交，等待执行...');
+    } else {
+      // Agent 未安装
+      terminalOutput.value.push(`> ${result.message}`);
+
+      if (result.status === AgentStatus.NOT_INSTALLED) {
+        // 显示下载提示对话框
+        showAgentNotInstalledDialog.value = true;
+      }
+    }
+  } catch (error) {
+    terminalOutput.value.push(`> 错误: ${error}`);
+  } finally {
+    isCheckingAgent.value = false;
+  }
+};
+
+// 打开 Agent 下载页面
+const downloadAgent = () => {
+  const downloadUrl = quantAgentService.getDownloadUrl();
+  window.open(downloadUrl, '_blank');
+  showAgentNotInstalledDialog.value = false;
 };
 
 // 启动策略
@@ -836,64 +1454,11 @@ const stopPanelResize = () => {
 };
 
 onMounted(() => {
-  if (editorContainer.value) {
-    // 初始化 Monaco Editor - 禁用需要 worker 的功能来避免错误
-    editor = monaco.editor.create(editorContainer.value, {
-      value: indicatorFiles.value[0].content,
-      language: 'python',
-      theme: 'vs',
-      fontSize: 14,
-      minimap: {enabled: true},
-      automaticLayout: false, // 禁用自动布局，手动控制
-      scrollBeyondLastLine: false,
-      lineNumbers: 'on',
-      roundedSelection: false,
-      scrollbar: {
-        vertical: 'visible',
-        horizontal: 'visible'
-      },
-      // 禁用颜色装饰器（这个功能需要 worker）
-      colorDecorators: false,
-      // 禁用链接检测（这个功能也可能需要 worker）
-      links: false
-    });
+  // Monaco Editor 将在第一次打开文件时创建
 
-    currentFile.value = indicatorFiles.value[0];
-
-    // 监听内容变化
-    editor.onDidChangeModelContent(() => {
-      if (currentFile.value) {
-        currentFile.value.content = editor!.getValue();
-      }
-    });
-
-    // 初始化布局函数
-    const updateLayout = () => {
-      if (editor && editorContainer.value) {
-        const width = editorContainer.value.clientWidth;
-        const height = editorContainer.value.clientHeight;
-        console.log('Editor layout update:', {width, height});
-        editor.layout({width, height});
-      }
-    };
-
-    // 多次尝试初始化布局，确保容器已经渲染
-    setTimeout(updateLayout, 0);
-    setTimeout(updateLayout, 100);
-    setTimeout(updateLayout, 300);
-
-    // 添加 ResizeObserver 监听容器尺寸变化
-    resizeObserver = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const {width, height} = entry.contentRect;
-        console.log('Container resized:', {width, height});
-        if (editor && width > 0 && height > 0) {
-          editor.layout({width, height});
-        }
-      }
-    });
-    resizeObserver.observe(editorContainer.value);
-  }
+  // 添加全局事件监听
+  document.addEventListener('click', closeContextMenu);
+  document.addEventListener('keydown', handleKeyDown);
 });
 
 onUnmounted(() => {
@@ -910,6 +1475,10 @@ onUnmounted(() => {
   // 清理底部面板拖拽事件
   document.removeEventListener('mousemove', handlePanelResize);
   document.removeEventListener('mouseup', stopPanelResize);
+
+  // 清理全局事件监听
+  document.removeEventListener('click', closeContextMenu);
+  document.removeEventListener('keydown', handleKeyDown);
 
   if (editor) {
     editor.dispose();
@@ -1188,6 +1757,21 @@ onUnmounted(() => {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
+.tool-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: #f0f3fa;
+  border-color: #e0e3eb;
+  color: #b0b5bd;
+}
+
+.tool-btn:disabled:hover {
+  transform: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  border-color: #e0e3eb;
+  color: #b0b5bd;
+}
+
 /* 启动按钮特殊样式 */
 .tool-btn:nth-child(4) {
   background: linear-gradient(135deg, #26a69a 0%, #1e8e7e 100%);
@@ -1256,6 +1840,72 @@ onUnmounted(() => {
   width: 100%;
   overflow: hidden;
 }
+
+/* 欢迎页面 */
+.welcome-page {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  min-height: 0;
+}
+
+.welcome-content {
+  text-align: center;
+  max-width: 500px;
+  padding: 40px;
+}
+
+.welcome-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #3b4252;
+  margin: 0 0 12px 0;
+}
+
+.welcome-subtitle {
+  font-size: 14px;
+  color: #76808f;
+  margin: 0 0 32px 0;
+  line-height: 1.6;
+}
+
+.welcome-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.welcome-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: #ffffff;
+  border: 1px solid #e0e3eb;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #3b4252;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.welcome-btn:hover {
+  background: #f8f9fa;
+  border-color: #2962ff;
+  color: #2962ff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(41, 98, 255, 0.15);
+}
+
+.welcome-btn:active {
+  transform: translateY(0);
+}
+
 
 /* 水平拖拽分割线 */
 .horizontal-resize-handle {
@@ -1749,6 +2399,169 @@ onUnmounted(() => {
 .dialog-btn:disabled:hover {
   transform: none;
   box-shadow: 0 2px 8px rgba(41, 98, 255, 0.2);
+}
+
+/* 右键菜单 */
+.context-menu {
+  position: fixed;
+  background: #ffffff;
+  border: 1px solid #e0e3eb;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  padding: 4px 0;
+  min-width: 180px;
+  z-index: 2000;
+  animation: fadeInScale 0.15s ease;
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #3b4252;
+  transition: background 0.15s;
+  user-select: none;
+}
+
+.context-menu-item:hover {
+  background: #f0f3fa;
+}
+
+.context-menu-item.disabled {
+  color: #b0b5bd;
+  cursor: not-allowed;
+}
+
+.context-menu-item.disabled:hover {
+  background: transparent;
+}
+
+.context-menu-item svg {
+  flex-shrink: 0;
+  color: #76808f;
+}
+
+.context-menu-item.danger {
+  color: #f44336;
+}
+
+.context-menu-item.danger svg {
+  color: #f44336;
+}
+
+.context-menu-item.danger:hover {
+  background: #ffebee;
+}
+
+.context-menu-divider {
+  height: 1px;
+  background: #e0e3eb;
+  margin: 4px 0;
+}
+
+/* 删除确认对话框 */
+.delete-confirm-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 20px 0;
+}
+
+.delete-confirm-message {
+  margin: 20px 0 8px 0;
+  font-size: 15px;
+  color: #3b4252;
+  line-height: 1.6;
+}
+
+.delete-confirm-message strong {
+  color: #f44336;
+  font-weight: 600;
+}
+
+.delete-confirm-warning {
+  margin: 0;
+  font-size: 13px;
+  color: #76808f;
+}
+
+.dialog-btn.danger {
+  background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(244, 67, 54, 0.2);
+}
+
+.dialog-btn.danger:hover {
+  background: linear-gradient(135deg, #d32f2f 0%, #c62828 100%);
+  box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
+  transform: translateY(-1px);
+}
+
+.dialog-btn.danger:active {
+  transform: translateY(0);
+}
+
+/* Agent 安装提示对话框 */
+.agent-install-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 20px 0;
+}
+
+.agent-install-title {
+  margin: 20px 0 12px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #3b4252;
+}
+
+.agent-install-message {
+  margin: 0 0 24px 0;
+  font-size: 14px;
+  color: #76808f;
+  line-height: 1.8;
+}
+
+.agent-install-features {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 300px;
+}
+
+.feature-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #3b4252;
+  text-align: left;
+}
+
+.feature-item svg {
+  flex-shrink: 0;
+  color: #26a69a;
 }
 
 </style>
