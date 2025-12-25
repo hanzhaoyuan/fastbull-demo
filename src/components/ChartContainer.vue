@@ -371,6 +371,7 @@ onUnmounted(() => {
   background: #ffffff;
   position: relative;
   min-height: 0;
+  height: 100%;
   overflow: hidden;
 }
 
@@ -457,8 +458,9 @@ onUnmounted(() => {
 
 .main-chart {
   flex: 1;
-  min-height: 200px;
+  min-height: 0;
   position: relative;
+  overflow: hidden;
 }
 
 .chart-footer {

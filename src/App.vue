@@ -138,7 +138,7 @@
       </div>
 
       <!-- 图表区域 -->
-      <div class="chart-wrapper">
+      <div class="chart-wrapper" :style="{ height: chartHeight + 'px' }">
         <!-- 左侧绘图工具 -->
         <div class="drawing-tools">
           <button class="tool-btn">
@@ -190,6 +190,15 @@
 
         <!-- 图表容器 -->
         <ChartContainer :timeframe="selectedTimeframe" />
+      </div>
+
+      <!-- 拖拽分割线 -->
+      <div
+        class="resize-handle"
+        @mousedown="startResize"
+        :class="{ 'is-resizing': isResizing }"
+      >
+        <div class="resize-handle-line"></div>
       </div>
 
       <!-- 底部区域 -->
@@ -368,7 +377,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted, onBeforeUnmount } from 'vue';
 import ChartContainer from './components/ChartContainer.vue';
 import QuantitativeEditor from './components/QuantitativeEditor.vue';
 
@@ -380,6 +389,70 @@ const selectedTimeframe = ref('H1');
 const activeTab = ref('positions');
 const isBottomMinimized = ref(false);
 const isBottomMaximized = ref(false);
+
+// 拖拽调整大小相关状态
+const chartHeight = ref(0);
+const isResizing = ref(false);
+const startY = ref(0);
+const startHeight = ref(0);
+
+// 最小和最大高度限制
+const MIN_CHART_HEIGHT = 200;
+const MIN_BOTTOM_HEIGHT = 200;
+const TOOLBAR_HEIGHT = 48; // 顶部工具栏高度
+
+// 初始化图表高度
+onMounted(() => {
+  const viewportHeight = window.innerHeight;
+  chartHeight.value = (viewportHeight - TOOLBAR_HEIGHT) * 0.5; // 初始高度为可用空间的50%
+});
+
+// 开始拖拽
+const startResize = (e: MouseEvent) => {
+  isResizing.value = true;
+  startY.value = e.clientY;
+  startHeight.value = chartHeight.value;
+
+  document.addEventListener('mousemove', handleResize);
+  document.addEventListener('mouseup', stopResize);
+  document.body.style.cursor = 'ns-resize';
+  document.body.style.userSelect = 'none';
+
+  e.preventDefault();
+};
+
+// 处理拖拽
+const handleResize = (e: MouseEvent) => {
+  if (!isResizing.value) return;
+
+  const deltaY = e.clientY - startY.value;
+  const newHeight = startHeight.value + deltaY;
+
+  // 计算可用的总高度
+  const viewportHeight = window.innerHeight;
+  const availableHeight = viewportHeight - TOOLBAR_HEIGHT;
+
+  // 确保图表和底部区域都有最小高度
+  const maxChartHeight = availableHeight - MIN_BOTTOM_HEIGHT;
+
+  // 限制高度范围
+  chartHeight.value = Math.max(MIN_CHART_HEIGHT, Math.min(newHeight, maxChartHeight));
+};
+
+// 停止拖拽
+const stopResize = () => {
+  isResizing.value = false;
+  document.removeEventListener('mousemove', handleResize);
+  document.removeEventListener('mouseup', stopResize);
+  document.body.style.cursor = '';
+  document.body.style.userSelect = '';
+};
+
+// 清理事件监听器
+onBeforeUnmount(() => {
+  document.removeEventListener('mousemove', handleResize);
+  document.removeEventListener('mouseup', stopResize);
+});
 
 // 切换最小化
 const toggleMinimize = () => {
@@ -555,23 +628,67 @@ const toggleMaximize = () => {
 
 /* 图表区域 */
 .chart-wrapper {
-  height: 50vh;
   display: flex;
   position: relative;
   overflow: hidden;
-  transition: height 0.3s ease;
+  flex-shrink: 0;
+  max-height: 100%;
 }
 
-/* 当底部最大化时，隐藏图表 */
+/* 拖拽分割线 */
+.resize-handle {
+  height: 6px;
+  background: transparent;
+  cursor: ns-resize;
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease;
+  flex-shrink: 0;
+}
+
+.resize-handle:hover {
+  background: #e8f5e9;
+}
+
+.resize-handle.is-resizing {
+  background: #26a69a;
+}
+
+.resize-handle-line {
+  width: 100%;
+  height: 1px;
+  background: #e0e3eb;
+  pointer-events: none;
+}
+
+.resize-handle:hover .resize-handle-line {
+  background: #26a69a;
+  height: 2px;
+}
+
+.resize-handle.is-resizing .resize-handle-line {
+  background: #ffffff;
+  height: 2px;
+}
+
+/* 当底部最大化时，隐藏图表和分割线 */
 .main-content.bottom-maximized .chart-wrapper {
-  height: 0;
+  height: 0 !important;
   min-height: 0;
   overflow: hidden;
 }
 
+.main-content.bottom-maximized .resize-handle {
+  display: none;
+}
+
 /* 当底部最小化时，图表占据更多空间 */
-.main-content.bottom-minimized .chart-wrapper {
-  height: calc(100vh - 48px - 48px); /* 100vh - 顶部工具栏 - 底部标签栏 */
+.main-content.bottom-minimized .resize-handle {
+  pointer-events: none;
+  opacity: 0.3;
 }
 
 .drawing-tools {
@@ -606,22 +723,23 @@ const toggleMaximize = () => {
 
 /* 底部区域 */
 .bottom-section {
-  height: calc(50vh - 48px);
+  flex: 1;
   display: flex;
   flex-direction: column;
   background: #ffffff;
   border-top: 1px solid #e0e3eb;
-  transition: height 0.3s ease;
   overflow: hidden;
+  min-height: 0;
 }
 
 .bottom-section.minimized {
-  height: 48px; /* 只显示标签栏 */
+  flex: 0 0 48px; /* 只显示标签栏 */
   overflow: hidden;
 }
 
 .bottom-section.maximized {
-  height: calc(100vh - 48px); /* 占满整个屏幕（除了顶部工具栏） */
+  flex: 1;
+  height: auto;
 }
 
 .bottom-tabs {
