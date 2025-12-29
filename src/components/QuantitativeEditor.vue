@@ -573,6 +573,7 @@
 import {ref, computed, onMounted, onUnmounted, nextTick} from 'vue';
 import * as monaco from 'monaco-editor';
 import { quantAgentService, AgentStatus } from '../services/QuantAgentService';
+import { codeFileService, type CodeFileDTO } from '../services/CodeFileService';
 
 // 配置 Monaco 环境，禁用 Web Workers
 // 创建一个最小化的 worker blob，避免加载错误
@@ -607,69 +608,10 @@ interface Problem {
   severity: 'error' | 'warning';
 }
 
-// 文件列表
-const indicatorFiles = ref<CodeFile[]>([
-  {
-    id: '1',
-    name: 'MATrader.py',
-    type: 'indicator',
-    content: `# MATrader.py - 移动平均线交易指标
-def calculate_ma(symbol, timeframe, period, mode):
-    """计算移动平均线"""
-    # TODO: 实现移动平均线计算逻辑
-    pass
-`,
-    lastModified: '2023-09-11 11:11:11'
-  },
-  {
-    id: '2',
-    name: 'FibonacciTrend.py',
-    type: 'indicator',
-    content: '# Fibonacci Trend Indicator\n',
-    lastModified: '2023-09-10 10:00:00'
-  },
-  {
-    id: '3',
-    name: 'MACD.py',
-    type: 'indicator',
-    content: '# MACD Indicator\n',
-    lastModified: '2023-09-09 09:00:00'
-  },
-  {
-    id: '4',
-    name: 'Golder.py',
-    type: 'indicator',
-    content: '# Golden Cross Indicator\n',
-    lastModified: '2023-09-08 08:00:00'
-  }
-]);
-
-const strategyFiles = ref<CodeFile[]>([
-  {
-    id: '5',
-    name: 'MAPlus.py',
-    type: 'strategy',
-    content: '# MA Plus Strategy\n',
-    lastModified: '2023-09-11 11:11:11'
-  },
-  {
-    id: '6',
-    name: 'DoubleRSILines.py',
-    type: 'strategy',
-    content: '# Double RSI Lines Strategy\n',
-    lastModified: '2023-09-10 10:00:00'
-  }
-]);
-
-const libraryFiles = ref<CodeFile[]>([
-  {
-    id: '7',
-    name: 'TradeLib.py',
-    type: 'library',
-    content: '# Trade Library\n',
-    lastModified: '2023-09-11 11:11:11'
-  }
-]);
+// 文件列表 - 初始化为空，从后端加载
+const indicatorFiles = ref<CodeFile[]>([]);
+const strategyFiles = ref<CodeFile[]>([]);
+const libraryFiles = ref<CodeFile[]>([]);
 
 const currentFile = ref<CodeFile | null>(null);
 const editorContainer = ref<HTMLDivElement>();
@@ -978,7 +920,7 @@ const getTemplateOptions = (type: 'indicator' | 'strategy' | 'library'): string[
 };
 
 // 创建新文件
-const createNewFile = () => {
+const createNewFile = async () => {
   // 验证文件名
   if (!validateFileName(newFileName.value)) {
     return;
@@ -987,28 +929,37 @@ const createNewFile = () => {
   const fileName = newFileName.value + '.py';
   const templateContent = getTemplateContent(newFileType.value, newFileTemplate.value);
 
-  const newFile: CodeFile = {
-    id: Date.now().toString(),
-    name: fileName,
-    type: newFileType.value,
-    content: templateContent,
-    lastModified: new Date().toLocaleString('zh-CN'),
-    description: newFileDescription.value,
-    author: '当前用户',
-    version: newFileVersion.value
-  };
+  try {
+    // 调用后端API创建文件
+    const createdFile = await codeFileService.create({
+      name: fileName,
+      type: newFileType.value,
+      content: templateContent,
+      description: newFileDescription.value,
+      version: newFileVersion.value,
+    });
 
-  if (newFileType.value === 'indicator') {
-    indicatorFiles.value.push(newFile);
-  } else if (newFileType.value === 'strategy') {
-    strategyFiles.value.push(newFile);
-  } else {
-    libraryFiles.value.push(newFile);
+    const newFile: CodeFile = {
+      ...createdFile,
+      id: createdFile.id || Date.now().toString(),
+    };
+
+    // 添加到对应的列表
+    if (newFileType.value === 'indicator') {
+      indicatorFiles.value.push(newFile);
+    } else if (newFileType.value === 'strategy') {
+      strategyFiles.value.push(newFile);
+    } else {
+      libraryFiles.value.push(newFile);
+    }
+
+    openFile(newFile);
+    showNewFileDialog.value = false;
+    terminalOutput.value.push(`> 已创建新文件: ${fileName}`);
+  } catch (error) {
+    terminalOutput.value.push(`> 错误: 创建文件失败 - ${error}`);
+    console.error('创建文件失败:', error);
   }
-
-  openFile(newFile);
-  showNewFileDialog.value = false;
-  terminalOutput.value.push(`> 已创建新文件: ${fileName}`);
 };
 
 // 显示文件右键菜单
@@ -1119,17 +1070,30 @@ const validateRenameFileName = () => {
 };
 
 // 确认重命名
-const confirmRename = () => {
+const confirmRename = async () => {
   if (!validateRenameFileName() || !contextMenuFile.value) return;
 
   const oldName = contextMenuFile.value.name;
   const newFileName = renameFileName.value + '.py';
 
-  contextMenuFile.value.name = newFileName;
-  contextMenuFile.value.lastModified = new Date().toLocaleString('zh-CN');
+  try {
+    // 调用后端API重命名文件
+    const updatedFile = await codeFileService.rename(
+      contextMenuFile.value.id,
+      contextMenuFile.value.type,
+      newFileName
+    );
 
-  terminalOutput.value.push(`> 文件已重命名: ${oldName} → ${newFileName}`);
-  showRenameDialog.value = false;
+    // 更新本地数据
+    contextMenuFile.value.name = newFileName;
+    contextMenuFile.value.lastModified = updatedFile.lastModified;
+
+    terminalOutput.value.push(`> 文件已重命名: ${oldName} → ${newFileName}`);
+    showRenameDialog.value = false;
+  } catch (error) {
+    terminalOutput.value.push(`> 错误: 重命名文件失败 - ${error}`);
+    console.error('重命名文件失败:', error);
+  }
 };
 
 // c. 复制文件（到剪贴板）
@@ -1142,50 +1106,35 @@ const copyFile = () => {
 };
 
 // c. 粘贴文件
-const pasteFile = () => {
+const pasteFile = async () => {
   if (!clipboard.value) {
     terminalOutput.value.push('> 剪贴板为空，无法粘贴');
     return;
   }
 
-  const originalName = clipboard.value.name.replace(/\.py$/, '');
-  let copyNumber = 1;
-  let newName = `${originalName}_copy${copyNumber}.py`;
+  try {
+    // 调用后端API复制文件
+    const newFileId = await codeFileService.copy(clipboard.value.id, clipboard.value.type);
 
-  const files = clipboard.value.type === 'indicator'
-    ? indicatorFiles.value
-    : clipboard.value.type === 'strategy'
-    ? strategyFiles.value
-    : libraryFiles.value;
+    // 从后端获取新文件的详细信息
+    const newFile = await codeFileService.getById(newFileId, clipboard.value.type);
 
-  // 找到一个不重复的名字
-  while (files.some(f => f.name === newName)) {
-    copyNumber++;
-    newName = `${originalName}_copy${copyNumber}.py`;
+    // 添加到对应的列表
+    if (newFile.type === 'indicator') {
+      indicatorFiles.value.push(newFile);
+    } else if (newFile.type === 'strategy') {
+      strategyFiles.value.push(newFile);
+    } else {
+      libraryFiles.value.push(newFile);
+    }
+
+    terminalOutput.value.push(`> 文件已粘贴: ${newFile.name}`);
+    openFile(newFile); // 自动打开新文件
+    closeContextMenu();
+  } catch (error) {
+    terminalOutput.value.push(`> 错误: 粘贴文件失败 - ${error}`);
+    console.error('粘贴文件失败:', error);
   }
-
-  const newFile: CodeFile = {
-    id: Date.now().toString(),
-    name: newName,
-    type: clipboard.value.type,
-    content: clipboard.value.content,
-    lastModified: new Date().toLocaleString('zh-CN'),
-    description: clipboard.value.description,
-    author: clipboard.value.author || '当前用户',
-    version: clipboard.value.version || '1.0.0',
-  };
-
-  if (newFile.type === 'indicator') {
-    indicatorFiles.value.push(newFile);
-  } else if (newFile.type === 'strategy') {
-    strategyFiles.value.push(newFile);
-  } else {
-    libraryFiles.value.push(newFile);
-  }
-
-  terminalOutput.value.push(`> 文件已粘贴: ${newName}`);
-  openFile(newFile); // 自动打开新文件
-  closeContextMenu();
 };
 
 // d. 下载到本地
@@ -1218,44 +1167,54 @@ const deleteFile = () => {
 };
 
 // 确认删除
-const confirmDelete = () => {
+const confirmDelete = async () => {
   if (!contextMenuFile.value) return;
 
   const fileName = contextMenuFile.value.name;
   const fileId = contextMenuFile.value.id;
+  const fileType = contextMenuFile.value.type;
 
-  if (contextMenuFile.value.type === 'indicator') {
-    const index = indicatorFiles.value.findIndex(f => f.id === fileId);
-    if (index !== -1) {
-      indicatorFiles.value.splice(index, 1);
+  try {
+    // 调用后端API删除文件
+    await codeFileService.delete(fileId, fileType);
+
+    // 删除本地数据
+    if (contextMenuFile.value.type === 'indicator') {
+      const index = indicatorFiles.value.findIndex(f => f.id === fileId);
+      if (index !== -1) {
+        indicatorFiles.value.splice(index, 1);
+      }
+    } else if (contextMenuFile.value.type === 'strategy') {
+      const index = strategyFiles.value.findIndex(f => f.id === fileId);
+      if (index !== -1) {
+        strategyFiles.value.splice(index, 1);
+      }
+    } else {
+      const index = libraryFiles.value.findIndex(f => f.id === fileId);
+      if (index !== -1) {
+        libraryFiles.value.splice(index, 1);
+      }
     }
-  } else if (contextMenuFile.value.type === 'strategy') {
-    const index = strategyFiles.value.findIndex(f => f.id === fileId);
-    if (index !== -1) {
-      strategyFiles.value.splice(index, 1);
+
+    // 如果删除的是当前打开的文件，关闭编辑器
+    if (currentFile.value?.id === fileId) {
+      currentFile.value = null;
+      if (editor) {
+        editor.setValue('');
+      }
     }
-  } else {
-    const index = libraryFiles.value.findIndex(f => f.id === fileId);
-    if (index !== -1) {
-      libraryFiles.value.splice(index, 1);
+
+    // 清空剪贴板（如果删除的是剪贴板中的文件）
+    if (clipboard.value?.id === fileId) {
+      clipboard.value = null;
     }
+
+    terminalOutput.value.push(`> 文件已删除: ${fileName}`);
+    showDeleteConfirmDialog.value = false;
+  } catch (error) {
+    terminalOutput.value.push(`> 错误: 删除文件失败 - ${error}`);
+    console.error('删除文件失败:', error);
   }
-
-  // 如果删除的是当前打开的文件，关闭编辑器
-  if (currentFile.value?.id === fileId) {
-    currentFile.value = null;
-    if (editor) {
-      editor.setValue('');
-    }
-  }
-
-  // 清空剪贴板（如果删除的是剪贴板中的文件）
-  if (clipboard.value?.id === fileId) {
-    clipboard.value = null;
-  }
-
-  terminalOutput.value.push(`> 文件已删除: ${fileName}`);
-  showDeleteConfirmDialog.value = false;
 };
 
 // 键盘快捷键处理
@@ -1298,11 +1257,29 @@ const handleKeyDown = (e: KeyboardEvent) => {
 };
 
 // 保存文件
-const saveFile = () => {
+const saveFile = async () => {
   if (currentFile.value && editor) {
     currentFile.value.content = editor.getValue();
-    currentFile.value.lastModified = new Date().toLocaleString('zh-CN');
-    terminalOutput.value.push(`> 文件已保存: ${currentFile.value.name}`);
+
+    try {
+      // 调用后端API更新文件
+      const updatedFile = await codeFileService.update({
+        id: currentFile.value.id,
+        name: currentFile.value.name,
+        type: currentFile.value.type,
+        content: currentFile.value.content,
+        description: currentFile.value.description,
+        version: currentFile.value.version,
+      });
+
+      // 更新本地数据
+      currentFile.value.lastModified = updatedFile.lastModified;
+
+      terminalOutput.value.push(`> 文件已保存: ${currentFile.value.name}`);
+    } catch (error) {
+      terminalOutput.value.push(`> 错误: 保存文件失败 - ${error}`);
+      console.error('保存文件失败:', error);
+    }
   }
 };
 
@@ -1395,10 +1372,28 @@ const startStrategy = () => {
 };
 
 // 保存关于信息
-const saveAboutInfo = () => {
+const saveAboutInfo = async () => {
   if (currentFile.value) {
-    showAboutDialog.value = false;
-    terminalOutput.value.push(`> 已更新文件信息: ${currentFile.value.name}`);
+    try {
+      // 调用后端API更新文件信息
+      const updatedFile = await codeFileService.update({
+        id: currentFile.value.id,
+        name: currentFile.value.name,
+        type: currentFile.value.type,
+        content: currentFile.value.content,
+        description: currentFile.value.description,
+        version: currentFile.value.version,
+      });
+
+      // 更新本地数据
+      currentFile.value.lastModified = updatedFile.lastModified;
+
+      showAboutDialog.value = false;
+      terminalOutput.value.push(`> 已更新文件信息: ${currentFile.value.name}`);
+    } catch (error) {
+      terminalOutput.value.push(`> 错误: 更新文件信息失败 - ${error}`);
+      console.error('更新文件信息失败:', error);
+    }
   }
 };
 
@@ -1505,8 +1500,34 @@ const stopPanelResize = () => {
   document.body.style.userSelect = '';
 };
 
+// 加载文件列表
+const isLoading = ref(false);
+
+const loadFiles = async () => {
+  isLoading.value = true;
+  try {
+    const { indicators, strategies, libraries } = await codeFileService.listAll();
+
+    indicatorFiles.value = indicators;
+    strategyFiles.value = strategies;
+    libraryFiles.value = libraries;
+
+    terminalOutput.value.push(`> 已加载 ${indicators.length} 个指标`);
+    terminalOutput.value.push(`> 已加载 ${strategies.length} 个策略`);
+    terminalOutput.value.push(`> 已加载 ${libraries.length} 个库`);
+  } catch (error) {
+    terminalOutput.value.push(`> 错误: 加载文件列表失败 - ${error}`);
+    console.error('加载文件列表失败:', error);
+  } finally {
+    isLoading.value = false;
+  }
+};
+
 onMounted(() => {
   // Monaco Editor 将在第一次打开文件时创建
+
+  // 加载文件列表
+  loadFiles();
 
   // 添加全局事件监听
   document.addEventListener('click', closeContextMenu);
