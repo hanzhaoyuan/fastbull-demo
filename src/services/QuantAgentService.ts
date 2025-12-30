@@ -196,10 +196,52 @@ class QuantAgentService {
   }
 
   /**
-   * 获取 Agent 下载链接（可根据实际情况修改）
+   * 获取 Agent 下载链接（根据平台自动选择）
    */
   getDownloadUrl(): string {
-    return 'https://your-company.com/downloads/quant-agent-setup.exe';
+    const platform = this.detectPlatform();
+
+    const downloadUrls = {
+      'windows': 'https://your-company.com/downloads/QuantAgentSetup-0.1.0.exe',
+      'mac': 'https://your-company.com/downloads/QuantAgent-0.1.0.dmg',
+      'linux': 'https://your-company.com/downloads/quant-agent-0.1.0-linux.tar.gz'
+    };
+
+    return downloadUrls[platform];
+  }
+
+  /**
+   * 检测当前操作系统平台
+   */
+  private detectPlatform(): 'windows' | 'mac' | 'linux' {
+    const userAgent = window.navigator.userAgent.toLowerCase();
+    const platform = window.navigator.platform.toLowerCase();
+
+    // 检测 Mac
+    if (platform.includes('mac') || userAgent.includes('mac')) {
+      return 'mac';
+    }
+
+    // 检测 Linux
+    if (platform.includes('linux') || userAgent.includes('linux')) {
+      return 'linux';
+    }
+
+    // 默认 Windows
+    return 'windows';
+  }
+
+  /**
+   * 获取当前平台名称（用于显示）
+   */
+  getPlatformName(): string {
+    const platform = this.detectPlatform();
+    const platformNames = {
+      'windows': 'Windows',
+      'mac': 'macOS',
+      'linux': 'Linux'
+    };
+    return platformNames[platform];
   }
 }
 
