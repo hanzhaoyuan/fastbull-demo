@@ -1061,24 +1061,60 @@ const showFileMenu = (file: CodeFile, event?: MouseEvent) => {
   selectedFile.value = file; // 同时设置选中文件
 
   if (event) {
-    // 计算菜单位置，确保不超出视口
+    // 菜单尺寸（根据实际菜单内容动态计算）
     const menuWidth = 200;
-    const menuHeight = 220;
+    // 菜单项数量：打开、重命名、复制、粘贴、下载、删除 = 6项
+    // 分隔线 = 1个
+    // 每个菜单项约 40px，分隔线 9px
+    const menuItemCount = 6;
+    const dividerCount = 1;
+    const menuHeight = menuItemCount * 40 + dividerCount * 9 + 8; // 8px是padding
+    const padding = 10; // 距离边界的安全距离
+
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
 
     let x = event.clientX;
     let y = event.clientY;
 
-    // 右边界检查
-    if (x + menuWidth > viewportWidth) {
-      x = viewportWidth - menuWidth - 10;
+    // 智能定位：优先显示在鼠标右下方，如果空间不够则自动调整
+
+    // 检查右侧空间
+    const hasRightSpace = x + menuWidth <= viewportWidth - padding;
+    // 检查左侧空间
+    const hasLeftSpace = x - menuWidth >= padding;
+    // 检查下方空间
+    const hasBottomSpace = y + menuHeight <= viewportHeight - padding;
+    // 检查上方空间
+    const hasTopSpace = y - menuHeight >= padding;
+
+    // 水平定位
+    if (hasRightSpace) {
+      // 右侧有空间，保持原位
+      x = x;
+    } else if (hasLeftSpace) {
+      // 右侧没空间但左侧有，显示在左侧
+      x = x - menuWidth;
+    } else {
+      // 两侧都没空间，尽量靠右但不超出边界
+      x = Math.max(padding, Math.min(x, viewportWidth - menuWidth - padding));
     }
 
-    // 下边界检查
-    if (y + menuHeight > viewportHeight) {
-      y = viewportHeight - menuHeight - 10;
+    // 垂直定位
+    if (hasBottomSpace) {
+      // 下方有空间，保持原位
+      y = y;
+    } else if (hasTopSpace) {
+      // 下方没空间但上方有，显示在上方
+      y = y - menuHeight;
+    } else {
+      // 上下都没空间，尽量靠下但不超出边界
+      y = Math.max(padding, Math.min(y, viewportHeight - menuHeight - padding));
     }
+
+    // 最后的边界保护（确保不会超出边界）
+    x = Math.max(padding, Math.min(x, viewportWidth - menuWidth - padding));
+    y = Math.max(padding, Math.min(y, viewportHeight - Math.min(menuHeight, 400) - padding));
 
     contextMenuX.value = x;
     contextMenuY.value = y;
@@ -2799,8 +2835,30 @@ onUnmounted(() => {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
   padding: 4px 0;
   min-width: 180px;
+  max-width: 280px;
+  max-height: 400px;
+  overflow-y: auto;
   z-index: 2000;
   animation: fadeInScale 0.15s ease;
+}
+
+/* 自定义滚动条（如果菜单内容过多） */
+.context-menu::-webkit-scrollbar {
+  width: 6px;
+}
+
+.context-menu::-webkit-scrollbar-track {
+  background: #f8f9fa;
+  border-radius: 0 8px 8px 0;
+}
+
+.context-menu::-webkit-scrollbar-thumb {
+  background: #c4c9d4;
+  border-radius: 3px;
+}
+
+.context-menu::-webkit-scrollbar-thumb:hover {
+  background: #a0a6b0;
 }
 
 @keyframes fadeInScale {
