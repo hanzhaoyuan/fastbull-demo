@@ -1567,7 +1567,7 @@ onUnmounted(() => {
   background: #f8f9fa;
 }
 
-/* 左侧文件树 */
+/* 左侧文件树 - 白色背景风格 */
 .file-sidebar {
   background: #ffffff;
   border-right: 1px solid #e0e3eb;
@@ -1575,6 +1575,30 @@ onUnmounted(() => {
   flex-direction: column;
   overflow-y: auto;
   flex-shrink: 0;
+  color: #3b4252;
+}
+
+/* 自定义滚动条 - 白色风格 */
+.file-sidebar::-webkit-scrollbar {
+  width: 10px;
+}
+
+.file-sidebar::-webkit-scrollbar-track {
+  background: #f8f9fa;
+}
+
+.file-sidebar::-webkit-scrollbar-thumb {
+  background: #c4c9d4;
+  border-radius: 5px;
+  border: 2px solid #f8f9fa;
+}
+
+.file-sidebar::-webkit-scrollbar-thumb:hover {
+  background: #a0a6b0;
+}
+
+.file-sidebar::-webkit-scrollbar-thumb:active {
+  background: #76808f;
 }
 
 /* 垂直拖拽分割线 */
@@ -1620,28 +1644,32 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  padding: 6px 10px;
+  padding: 8px 12px;
   border-bottom: 1px solid #e0e3eb;
   background: #ffffff;
 }
 
 .collapse-all-btn {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   background: transparent;
   border: none;
-  color: #76808f;
+  color: #3b4252;
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: 5px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .collapse-all-btn:hover {
   background: #f0f3fa;
-  color: #3b4252;
+  color: #2962ff;
+}
+
+.collapse-all-btn:active {
+  background: #e0e3eb;
 }
 
 .file-category {
@@ -1652,22 +1680,25 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 12px 16px;
-  background: #f8f9fa;
-  border-bottom: 1px solid #e0e3eb;
+  padding: 10px 12px;
+  background: transparent;
   cursor: pointer;
   user-select: none;
-  transition: background 0.2s;
+  transition: background 0.15s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .category-header:hover {
+  background: #f8f9fa;
+}
+
+.category-header:active {
   background: #f0f3fa;
 }
 
 .collapse-icon {
-  color: #76808f;
+  color: #3b4252;
   flex-shrink: 0;
-  transition: transform 0.2s ease;
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .collapse-icon.collapsed {
@@ -1676,9 +1707,11 @@ onUnmounted(() => {
 
 .category-title {
   flex: 1;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 700;
   color: #3b4252;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
 }
 
 .add-btn {
@@ -1686,45 +1719,84 @@ onUnmounted(() => {
   height: 24px;
   background: transparent;
   border: none;
-  color: #2962ff;
+  color: #3b4252;
   font-size: 18px;
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: 5px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 0;
+}
+
+.category-header:hover .add-btn {
+  opacity: 1;
 }
 
 .add-btn:hover {
-  background: #e8f5e9;
+  background: #f0f3fa;
+  color: #2962ff;
+}
+
+.add-btn:active {
+  background: #e0e3eb;
 }
 
 .file-list {
-  padding: 4px 0;
+  padding: 0;
+  background: #ffffff;
 }
 
 .file-item {
   display: flex;
   align-items: center;
-  padding: 8px 16px;
+  padding: 5px 12px 5px 24px;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 0.15s cubic-bezier(0.4, 0, 0.2, 1), transform 0.1s;
   gap: 8px;
+  position: relative;
+}
+
+.file-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #2962ff;
+  opacity: 0;
+  transition: opacity 0.15s;
 }
 
 .file-item:hover {
-  background: #f0f3fa;
+  background: #f8f9fa;
 }
 
 .file-item.active {
   background: #e8f5e9;
-  color: #2962ff;
+  color: #3b4252;
+}
+
+.file-item.active::before {
+  opacity: 1;
 }
 
 .file-icon {
   color: #2962ff;
   flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  transition: transform 0.2s;
+}
+
+.file-item:hover .file-icon {
+  transform: scale(1.1);
+}
+
+.file-item.active .file-icon {
+  color: #26a69a;
 }
 
 .file-name {
@@ -1733,18 +1805,30 @@ onUnmounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: #3b4252;
+  font-weight: 400;
+}
+
+.file-item.active .file-name {
+  color: #3b4252;
+  font-weight: 500;
 }
 
 .more-btn {
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   background: transparent;
   border: none;
-  color: #76808f;
+  color: #3b4252;
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: 5px;
   opacity: 0;
-  transition: all 0.2s;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: bold;
 }
 
 .file-item:hover .more-btn {
@@ -1752,7 +1836,8 @@ onUnmounted(() => {
 }
 
 .more-btn:hover {
-  background: #e0e3eb;
+  background: #f0f3fa;
+  color: #2962ff;
 }
 
 /* 右侧编辑区域 */
