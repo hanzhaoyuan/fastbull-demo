@@ -30,7 +30,11 @@
           <div
               v-for="file in indicatorFiles"
               :key="file.id"
-              :class="['file-item', { active: currentFile?.id === file.id }]"
+              :class="[
+                'file-item',
+                { active: currentFile?.id === file.id && currentFile?.type === file.type },
+                { opened: isFileOpened(file) && !(currentFile?.id === file.id && currentFile?.type === file.type) }
+              ]"
               @click="openFile(file)"
               @contextmenu.prevent="showFileMenu(file, $event)"
           >
@@ -57,7 +61,11 @@
           <div
               v-for="file in strategyFiles"
               :key="file.id"
-              :class="['file-item', { active: currentFile?.id === file.id }]"
+              :class="[
+                'file-item',
+                { active: currentFile?.id === file.id && currentFile?.type === file.type },
+                { opened: isFileOpened(file) && !(currentFile?.id === file.id && currentFile?.type === file.type) }
+              ]"
               @click="openFile(file)"
               @contextmenu.prevent="showFileMenu(file, $event)"
           >
@@ -84,7 +92,11 @@
           <div
               v-for="file in libraryFiles"
               :key="file.id"
-              :class="['file-item', { active: currentFile?.id === file.id }]"
+              :class="[
+                'file-item',
+                { active: currentFile?.id === file.id && currentFile?.type === file.type },
+                { opened: isFileOpened(file) && !(currentFile?.id === file.id && currentFile?.type === file.type) }
+              ]"
               @click="openFile(file)"
               @contextmenu.prevent="showFileMenu(file, $event)"
           >
@@ -113,8 +125,8 @@
       <div class="file-tabs" v-if="openedFiles.length > 0">
         <div
           v-for="file in openedFiles"
-          :key="file.id"
-          :class="['file-tab', { active: currentFile?.id === file.id }]"
+          :key="`${file.id}-${file.type}`"
+          :class="['file-tab', { active: currentFile?.id === file.id && currentFile?.type === file.type }]"
           @click="switchToFile(file)"
         >
           <svg class="tab-icon" viewBox="0 0 16 16" width="14" height="14">
@@ -739,18 +751,35 @@ let resizeObserver: ResizeObserver | null = null;
 // 打开文件
 const openFile = async (file: CodeFile) => {
   selectedFile.value = file; // 设置选中文件
-  currentFile.value = file;
 
-  // 如果文件不在已打开列表中，则添加
-  const existingFile = openedFiles.value.find(f => f.id === file.id);
-  if (!existingFile) {
-    openedFiles.value.push(file);
+  // 在文件列表中查找实际的文件对象，确保引用一致
+  let actualFile: CodeFile | undefined;
+  if (file.type === 'indicator') {
+    actualFile = indicatorFiles.value.find(f => f.id === file.id);
+  } else if (file.type === 'strategy') {
+    actualFile = strategyFiles.value.find(f => f.id === file.id);
+  } else {
+    actualFile = libraryFiles.value.find(f => f.id === file.id);
   }
 
+  // 使用实际的文件对象（确保引用一致）
+  const targetFile = actualFile || file;
+  currentFile.value = targetFile;
+
+  // 如果文件不在已打开列表中，则添加
+  // 重要：查找时要同时匹配 ID 和 type，因为不同类型的文件可能有相同的ID
+  const existingIndex = openedFiles.value.findIndex(f => f.id === targetFile.id && f.type === targetFile.type);
+
+  if (existingIndex === -1) {
+    // 文件未打开，添加到列表
+    openedFiles.value.push(targetFile);
+  }
+  // 如果文件已在打开列表中，只需要切换 currentFile，不需要修改 openedFiles
+
   // 展开对应的分类
-  if (file.type === 'indicator') {
+  if (targetFile.type === 'indicator') {
     categoryExpanded.value.indicator = true;
-  } else if (file.type === 'strategy') {
+  } else if (targetFile.type === 'strategy') {
     categoryExpanded.value.strategy = true;
   } else {
     categoryExpanded.value.library = true;
@@ -762,7 +791,7 @@ const openFile = async (file: CodeFile) => {
   // 如果编辑器还未创建，则创建编辑器
   if (!editor && editorContainer.value) {
     editor = monaco.editor.create(editorContainer.value, {
-      value: file.content,
+      value: targetFile.content,
       language: 'python',
       theme: 'vs',
       fontSize: 14,
@@ -783,6 +812,14 @@ const openFile = async (file: CodeFile) => {
     editor.onDidChangeModelContent(() => {
       if (currentFile.value) {
         currentFile.value.content = editor!.getValue();
+
+        // 同步更新 openedFiles 中的文件内容（匹配ID和type）
+        const openedIndex = openedFiles.value.findIndex(
+          f => f.id === currentFile.value!.id && f.type === currentFile.value!.type
+        );
+        if (openedIndex !== -1) {
+          openedFiles.value[openedIndex].content = currentFile.value.content;
+        }
       }
     });
 
@@ -811,27 +848,26 @@ const openFile = async (file: CodeFile) => {
     resizeObserver.observe(editorContainer.value);
   } else if (editor) {
     // 编辑器已存在，只需要更新内容
-    editor.setValue(file.content);
+    editor.setValue(targetFile.content || '');
   }
 };
 
 // 切换到指定文件
 const switchToFile = (file: CodeFile) => {
-  if (currentFile.value?.id !== file.id) {
-    openFile(file);
-  }
+  // 总是调用 openFile，确保引用正确
+  openFile(file);
 };
 
 // 关闭标签
 const closeTab = (file: CodeFile) => {
-  const index = openedFiles.value.findIndex(f => f.id === file.id);
+  const index = openedFiles.value.findIndex(f => f.id === file.id && f.type === file.type);
   if (index === -1) return;
 
   // 从已打开列表中移除
   openedFiles.value.splice(index, 1);
 
   // 如果关闭的是当前文件
-  if (currentFile.value?.id === file.id) {
+  if (currentFile.value?.id === file.id && currentFile.value?.type === file.type) {
     // 如果还有其他打开的文件，切换到相邻的文件
     if (openedFiles.value.length > 0) {
       // 优先切换到右边的文件，如果没有则切换到左边
@@ -888,6 +924,11 @@ const addFile = (type: 'indicator' | 'strategy' | 'library') => {
   } else {
     categoryExpanded.value.library = true;
   }
+};
+
+// 检查文件是否已打开（在标签栏中）
+const isFileOpened = (file: CodeFile): boolean => {
+  return openedFiles.value.some(f => f.id === file.id && f.type === file.type);
 };
 
 // 验证文件名
@@ -1212,6 +1253,22 @@ const confirmRename = async () => {
     contextMenuFile.value.name = newFileName;
     contextMenuFile.value.lastModified = updatedFile.lastModified;
 
+    // 同步更新 openedFiles 中的文件名（如果该文件已打开，匹配ID和type）
+    const openedIndex = openedFiles.value.findIndex(
+      f => f.id === contextMenuFile.value!.id && f.type === contextMenuFile.value!.type
+    );
+    if (openedIndex !== -1) {
+      openedFiles.value[openedIndex].name = newFileName;
+      openedFiles.value[openedIndex].lastModified = updatedFile.lastModified;
+    }
+
+    // 同步更新 currentFile（如果该文件正在编辑，匹配ID和type）
+    if (currentFile.value?.id === contextMenuFile.value.id &&
+        currentFile.value?.type === contextMenuFile.value.type) {
+      currentFile.value.name = newFileName;
+      currentFile.value.lastModified = updatedFile.lastModified;
+    }
+
     terminalOutput.value.push(`> 文件已重命名: ${oldName} → ${newFileName}`);
     showRenameDialog.value = false;
   } catch (error) {
@@ -1323,14 +1380,16 @@ const confirmDelete = async () => {
       }
     }
 
-    // 从已打开的标签中移除（如果存在）
-    const openedIndex = openedFiles.value.findIndex(f => f.id === fileId);
+    // 从已打开的标签中移除（如果存在，匹配ID和type）
+    const openedIndex = openedFiles.value.findIndex(
+      f => f.id === fileId && f.type === fileType
+    );
     if (openedIndex !== -1) {
       openedFiles.value.splice(openedIndex, 1);
     }
 
     // 如果删除的是当前打开的文件，切换到其他文件或关闭编辑器
-    if (currentFile.value?.id === fileId) {
+    if (currentFile.value?.id === fileId && currentFile.value?.type === fileType) {
       if (openedFiles.value.length > 0) {
         // 切换到相邻的文件
         const nextFile = openedFiles.value[openedIndex] || openedFiles.value[openedIndex - 1];
@@ -1346,8 +1405,8 @@ const confirmDelete = async () => {
       }
     }
 
-    // 清空剪贴板（如果删除的是剪贴板中的文件）
-    if (clipboard.value?.id === fileId) {
+    // 清空剪贴板（如果删除的是剪贴板中的文件，匹配ID和type）
+    if (clipboard.value?.id === fileId && clipboard.value?.type === fileType) {
       clipboard.value = null;
     }
 
@@ -1416,6 +1475,31 @@ const saveFile = async () => {
 
       // 更新本地数据
       currentFile.value.lastModified = updatedFile.lastModified;
+
+      // 同步更新 openedFiles 中的文件（如果该文件已打开，匹配ID和type）
+      const openedIndex = openedFiles.value.findIndex(
+        f => f.id === currentFile.value!.id && f.type === currentFile.value!.type
+      );
+      if (openedIndex !== -1) {
+        openedFiles.value[openedIndex].content = currentFile.value.content;
+        openedFiles.value[openedIndex].lastModified = updatedFile.lastModified;
+      }
+
+      // 同步更新文件列表中的文件
+      let fileList: CodeFile[] | undefined;
+      if (currentFile.value.type === 'indicator') {
+        fileList = indicatorFiles.value;
+      } else if (currentFile.value.type === 'strategy') {
+        fileList = strategyFiles.value;
+      } else {
+        fileList = libraryFiles.value;
+      }
+
+      const fileIndex = fileList.findIndex(f => f.id === currentFile.value!.id);
+      if (fileIndex !== -1) {
+        fileList[fileIndex].content = currentFile.value.content;
+        fileList[fileIndex].lastModified = updatedFile.lastModified;
+      }
 
       terminalOutput.value.push(`> 文件已保存: ${currentFile.value.name}`);
     } catch (error) {
@@ -1529,6 +1613,33 @@ const saveAboutInfo = async () => {
 
       // 更新本地数据
       currentFile.value.lastModified = updatedFile.lastModified;
+
+      // 同步更新 openedFiles 中的文件（如果该文件已打开，匹配ID和type）
+      const openedIndex = openedFiles.value.findIndex(
+        f => f.id === currentFile.value!.id && f.type === currentFile.value!.type
+      );
+      if (openedIndex !== -1) {
+        openedFiles.value[openedIndex].description = currentFile.value.description;
+        openedFiles.value[openedIndex].version = currentFile.value.version;
+        openedFiles.value[openedIndex].lastModified = updatedFile.lastModified;
+      }
+
+      // 同步更新文件列表中的文件
+      let fileList: CodeFile[] | undefined;
+      if (currentFile.value.type === 'indicator') {
+        fileList = indicatorFiles.value;
+      } else if (currentFile.value.type === 'strategy') {
+        fileList = strategyFiles.value;
+      } else {
+        fileList = libraryFiles.value;
+      }
+
+      const fileIndex = fileList.findIndex(f => f.id === currentFile.value!.id);
+      if (fileIndex !== -1) {
+        fileList[fileIndex].description = currentFile.value.description;
+        fileList[fileIndex].version = currentFile.value.version;
+        fileList[fileIndex].lastModified = updatedFile.lastModified;
+      }
 
       showAboutDialog.value = false;
       terminalOutput.value.push(`> 已更新文件信息: ${currentFile.value.name}`);
@@ -1916,6 +2027,21 @@ onUnmounted(() => {
   background: #f8f9fa;
 }
 
+/* 已打开但未激活的文件 */
+.file-item.opened {
+  background: #f0f3fa;
+  font-weight: 500;
+}
+
+.file-item.opened .file-name {
+  color: #2962ff;
+}
+
+.file-item.opened .file-icon {
+  color: #2962ff;
+}
+
+/* 当前激活的文件（正在编辑） */
 .file-item.active {
   background: #e8f5e9;
   color: #3b4252;
