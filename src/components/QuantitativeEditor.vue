@@ -609,7 +609,7 @@
 import {ref, computed, onMounted, onUnmounted, nextTick} from 'vue';
 import * as monaco from 'monaco-editor';
 import { quantAgentService, AgentStatus } from '../services/QuantAgentService';
-import { codeFileService, type CodeFileDTO } from '../services/CodeFileService';
+import { codeFileService } from '../services/CodeFileService';
 
 // 配置 Monaco 环境，禁用 Web Workers
 // 创建一个最小化的 worker blob，避免加载错误
@@ -1068,6 +1068,7 @@ const createNewFile = async () => {
     const newFile: CodeFile = {
       ...createdFile,
       id: createdFile.id || Date.now().toString(),
+      lastModified: createdFile.lastModified || new Date().toISOString(),
     };
 
     // 添加到对应的列表
@@ -1251,7 +1252,7 @@ const confirmRename = async () => {
 
     // 更新本地数据
     contextMenuFile.value.name = newFileName;
-    contextMenuFile.value.lastModified = updatedFile.lastModified;
+    contextMenuFile.value.lastModified = updatedFile.lastModified || new Date().toISOString();
 
     // 同步更新 openedFiles 中的文件名（如果该文件已打开，匹配ID和type）
     const openedIndex = openedFiles.value.findIndex(
@@ -1259,14 +1260,14 @@ const confirmRename = async () => {
     );
     if (openedIndex !== -1) {
       openedFiles.value[openedIndex].name = newFileName;
-      openedFiles.value[openedIndex].lastModified = updatedFile.lastModified;
+      openedFiles.value[openedIndex].lastModified = updatedFile.lastModified || new Date().toISOString();
     }
 
     // 同步更新 currentFile（如果该文件正在编辑，匹配ID和type）
     if (currentFile.value?.id === contextMenuFile.value.id &&
         currentFile.value?.type === contextMenuFile.value.type) {
       currentFile.value.name = newFileName;
-      currentFile.value.lastModified = updatedFile.lastModified;
+      currentFile.value.lastModified = updatedFile.lastModified || new Date().toISOString();
     }
 
     terminalOutput.value.push(`> 文件已重命名: ${oldName} → ${newFileName}`);
@@ -1298,7 +1299,14 @@ const pasteFile = async () => {
     const newFileId = await codeFileService.copy(clipboard.value.id, clipboard.value.type);
 
     // 从后端获取新文件的详细信息
-    const newFile = await codeFileService.getById(newFileId, clipboard.value.type);
+    const newFileData = await codeFileService.getById(newFileId, clipboard.value.type);
+
+    // 转换为 CodeFile 类型
+    const newFile: CodeFile = {
+      ...newFileData,
+      id: newFileData.id || newFileId,
+      lastModified: newFileData.lastModified || new Date().toISOString(),
+    };
 
     // 添加到对应的列表
     if (newFile.type === 'indicator') {
@@ -1474,7 +1482,7 @@ const saveFile = async () => {
       });
 
       // 更新本地数据
-      currentFile.value.lastModified = updatedFile.lastModified;
+      currentFile.value.lastModified = updatedFile.lastModified || new Date().toISOString();
 
       // 同步更新 openedFiles 中的文件（如果该文件已打开，匹配ID和type）
       const openedIndex = openedFiles.value.findIndex(
@@ -1482,7 +1490,7 @@ const saveFile = async () => {
       );
       if (openedIndex !== -1) {
         openedFiles.value[openedIndex].content = currentFile.value.content;
-        openedFiles.value[openedIndex].lastModified = updatedFile.lastModified;
+        openedFiles.value[openedIndex].lastModified = updatedFile.lastModified || new Date().toISOString();
       }
 
       // 同步更新文件列表中的文件
@@ -1498,7 +1506,7 @@ const saveFile = async () => {
       const fileIndex = fileList.findIndex(f => f.id === currentFile.value!.id);
       if (fileIndex !== -1) {
         fileList[fileIndex].content = currentFile.value.content;
-        fileList[fileIndex].lastModified = updatedFile.lastModified;
+        fileList[fileIndex].lastModified = updatedFile.lastModified || new Date().toISOString();
       }
 
       terminalOutput.value.push(`> 文件已保存: ${currentFile.value.name}`);
@@ -1612,7 +1620,7 @@ const saveAboutInfo = async () => {
       });
 
       // 更新本地数据
-      currentFile.value.lastModified = updatedFile.lastModified;
+      currentFile.value.lastModified = updatedFile.lastModified || new Date().toISOString();
 
       // 同步更新 openedFiles 中的文件（如果该文件已打开，匹配ID和type）
       const openedIndex = openedFiles.value.findIndex(
@@ -1621,7 +1629,7 @@ const saveAboutInfo = async () => {
       if (openedIndex !== -1) {
         openedFiles.value[openedIndex].description = currentFile.value.description;
         openedFiles.value[openedIndex].version = currentFile.value.version;
-        openedFiles.value[openedIndex].lastModified = updatedFile.lastModified;
+        openedFiles.value[openedIndex].lastModified = updatedFile.lastModified || new Date().toISOString();
       }
 
       // 同步更新文件列表中的文件
@@ -1638,7 +1646,7 @@ const saveAboutInfo = async () => {
       if (fileIndex !== -1) {
         fileList[fileIndex].description = currentFile.value.description;
         fileList[fileIndex].version = currentFile.value.version;
-        fileList[fileIndex].lastModified = updatedFile.lastModified;
+        fileList[fileIndex].lastModified = updatedFile.lastModified || new Date().toISOString();
       }
 
       showAboutDialog.value = false;
@@ -1761,9 +1769,10 @@ const loadFiles = async () => {
   try {
     const { indicators, strategies, libraries } = await codeFileService.listAll();
 
-    indicatorFiles.value = indicators;
-    strategyFiles.value = strategies;
-    libraryFiles.value = libraries;
+    // 过滤掉缺少必需字段的项，并使用类型守卫
+    indicatorFiles.value = indicators.filter((f): f is CodeFile => !!f.id && !!f.lastModified);
+    strategyFiles.value = strategies.filter((f): f is CodeFile => !!f.id && !!f.lastModified);
+    libraryFiles.value = libraries.filter((f): f is CodeFile => !!f.id && !!f.lastModified);
 
     terminalOutput.value.push(`> 已加载 ${indicators.length} 个指标`);
     terminalOutput.value.push(`> 已加载 ${strategies.length} 个策略`);

@@ -201,10 +201,12 @@ class QuantAgentService {
   getDownloadUrl(): string {
     const platform = this.detectPlatform();
 
+    // 使用相对路径，从 public/downloads 目录获取安装包
+    // 部署时需要将对应平台的安装包放到 public/downloads 目录
     const downloadUrls = {
-      'windows': 'https://your-company.com/downloads/QuantAgentSetup-0.1.0.exe',
-      'mac': 'https://your-company.com/downloads/QuantAgent-0.1.0.dmg',
-      'linux': 'https://your-company.com/downloads/quant-agent-0.1.0-linux.tar.gz'
+      'windows': '/downloads/QuantAgentSetup-0.1.0.exe',
+      'mac': '/downloads/QuantAgent-0.1.0.dmg',
+      'linux': '/downloads/quant-agent-0.1.0-linux.tar.gz'
     };
 
     return downloadUrls[platform];

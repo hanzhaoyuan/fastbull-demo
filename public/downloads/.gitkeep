@@ -1,0 +1,6 @@
+# 此文件用于占位，确保 git 追踪此目录
+# 部署前请将 Quant Agent 安装包放到此目录
+
+# Windows: QuantAgentSetup-0.1.0.exe
+# macOS: QuantAgent-0.1.0.dmg
+# Linux: quant-agent-0.1.0-linux.tar.gz
