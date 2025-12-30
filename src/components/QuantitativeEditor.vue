@@ -109,6 +109,30 @@
 
     <!-- 右侧编辑区域 -->
     <div class="editor-main">
+      <!-- 文件标签栏 -->
+      <div class="file-tabs" v-if="openedFiles.length > 0">
+        <div
+          v-for="file in openedFiles"
+          :key="file.id"
+          :class="['file-tab', { active: currentFile?.id === file.id }]"
+          @click="switchToFile(file)"
+        >
+          <svg class="tab-icon" viewBox="0 0 16 16" width="14" height="14">
+            <path fill="currentColor" d="M4 0h5.5L14 4.5V16H2V0h2zm0 1v14h9V5h-4V1H4z"/>
+          </svg>
+          <span class="tab-name">{{ file.name }}</span>
+          <button
+            class="tab-close"
+            @click.stop="closeTab(file)"
+            title="关闭"
+          >
+            <svg viewBox="0 0 16 16" width="12" height="12">
+              <path d="M12.207 3.793l-1.414-1.414L8 5.172 5.207 2.379 3.793 3.793 6.586 6.586 3.793 9.379l1.414 1.414L8 7.999l2.793 2.794 1.414-1.414L9.414 6.586z" fill="currentColor"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
       <!-- 顶部工具栏 - 合并文件信息和按钮 -->
       <div class="editor-toolbar" v-if="currentFile">
         <div class="file-info-section">
@@ -138,7 +162,7 @@
       </div>
 
       <!-- 欢迎页面（无文件打开时） -->
-      <div v-if="!currentFile" class="welcome-page">
+      <div v-if="openedFiles.length === 0" class="welcome-page">
         <div class="welcome-content">
           <svg viewBox="0 0 54 54" width="54" height="54" style="margin-bottom: 0px;">
             <path d="M32 8l-4 4-4-4-4 4-4-4-4 4-4-4v40l4-4 4 4 4-4 4 4 4-4 4 4 4-4 4 4V8l-4 4-4-4-4 4z" fill="none" stroke="#76808f" stroke-width="2"/>
@@ -172,7 +196,7 @@
       </div>
 
       <!-- Monaco 编辑器 -->
-      <div v-if="currentFile" class="editor-container" ref="editorContainer"></div>
+      <div v-if="openedFiles.length > 0" class="editor-container" ref="editorContainer"></div>
 
       <!-- 底部面板拖拽分割线 -->
       <div
@@ -230,7 +254,7 @@
       </div>
 
       <!-- 已关闭面板的图标栏（仅在打开文件时显示） -->
-      <div v-if="currentFile" class="minimized-panel-bar">
+      <div v-if="openedFiles.length > 0" class="minimized-panel-bar">
         <button v-if="!panelVisibility.terminal" class="minimized-panel-btn" @click="togglePanel('terminal')"
                 title="Terminal">
           <svg viewBox="0 0 16 16" width="16" height="16">
@@ -613,6 +637,9 @@ const indicatorFiles = ref<CodeFile[]>([]);
 const strategyFiles = ref<CodeFile[]>([]);
 const libraryFiles = ref<CodeFile[]>([]);
 
+// 已打开的文件标签列表
+const openedFiles = ref<CodeFile[]>([]);
+
 const currentFile = ref<CodeFile | null>(null);
 const editorContainer = ref<HTMLDivElement>();
 const bottomPanel = ref<'terminal' | 'problems' | null>(null);
@@ -714,6 +741,21 @@ const openFile = async (file: CodeFile) => {
   selectedFile.value = file; // 设置选中文件
   currentFile.value = file;
 
+  // 如果文件不在已打开列表中，则添加
+  const existingFile = openedFiles.value.find(f => f.id === file.id);
+  if (!existingFile) {
+    openedFiles.value.push(file);
+  }
+
+  // 展开对应的分类
+  if (file.type === 'indicator') {
+    categoryExpanded.value.indicator = true;
+  } else if (file.type === 'strategy') {
+    categoryExpanded.value.strategy = true;
+  } else {
+    categoryExpanded.value.library = true;
+  }
+
   // 等待 DOM 更新，确保 editorContainer 已经渲染
   await nextTick();
 
@@ -773,6 +815,40 @@ const openFile = async (file: CodeFile) => {
   }
 };
 
+// 切换到指定文件
+const switchToFile = (file: CodeFile) => {
+  if (currentFile.value?.id !== file.id) {
+    openFile(file);
+  }
+};
+
+// 关闭标签
+const closeTab = (file: CodeFile) => {
+  const index = openedFiles.value.findIndex(f => f.id === file.id);
+  if (index === -1) return;
+
+  // 从已打开列表中移除
+  openedFiles.value.splice(index, 1);
+
+  // 如果关闭的是当前文件
+  if (currentFile.value?.id === file.id) {
+    // 如果还有其他打开的文件，切换到相邻的文件
+    if (openedFiles.value.length > 0) {
+      // 优先切换到右边的文件，如果没有则切换到左边
+      const nextFile = openedFiles.value[index] || openedFiles.value[index - 1];
+      if (nextFile) {
+        openFile(nextFile);
+      }
+    } else {
+      // 没有打开的文件了，清空当前文件
+      currentFile.value = null;
+      if (editor) {
+        editor.setValue('');
+      }
+    }
+  }
+};
+
 // 切换分类折叠状态
 const toggleCategory = (category: 'indicator' | 'strategy' | 'library') => {
   categoryExpanded.value[category] = !categoryExpanded.value[category];
@@ -803,6 +879,15 @@ const addFile = (type: 'indicator' | 'strategy' | 'library') => {
   showAdvancedOptions.value = false;
   fileNameError.value = '';
   showNewFileDialog.value = true;
+
+  // 展开对应的分类，让用户看到文件会被添加到哪里
+  if (type === 'indicator') {
+    categoryExpanded.value.indicator = true;
+  } else if (type === 'strategy') {
+    categoryExpanded.value.strategy = true;
+  } else {
+    categoryExpanded.value.library = true;
+  }
 };
 
 // 验证文件名
@@ -947,10 +1032,13 @@ const createNewFile = async () => {
     // 添加到对应的列表
     if (newFileType.value === 'indicator') {
       indicatorFiles.value.push(newFile);
+      categoryExpanded.value.indicator = true; // 展开分类
     } else if (newFileType.value === 'strategy') {
       strategyFiles.value.push(newFile);
+      categoryExpanded.value.strategy = true; // 展开分类
     } else {
       libraryFiles.value.push(newFile);
+      categoryExpanded.value.library = true; // 展开分类
     }
 
     openFile(newFile);
@@ -1122,10 +1210,13 @@ const pasteFile = async () => {
     // 添加到对应的列表
     if (newFile.type === 'indicator') {
       indicatorFiles.value.push(newFile);
+      categoryExpanded.value.indicator = true; // 展开分类
     } else if (newFile.type === 'strategy') {
       strategyFiles.value.push(newFile);
+      categoryExpanded.value.strategy = true; // 展开分类
     } else {
       libraryFiles.value.push(newFile);
+      categoryExpanded.value.library = true; // 展开分类
     }
 
     terminalOutput.value.push(`> 文件已粘贴: ${newFile.name}`);
@@ -1196,11 +1287,26 @@ const confirmDelete = async () => {
       }
     }
 
-    // 如果删除的是当前打开的文件，关闭编辑器
+    // 从已打开的标签中移除（如果存在）
+    const openedIndex = openedFiles.value.findIndex(f => f.id === fileId);
+    if (openedIndex !== -1) {
+      openedFiles.value.splice(openedIndex, 1);
+    }
+
+    // 如果删除的是当前打开的文件，切换到其他文件或关闭编辑器
     if (currentFile.value?.id === fileId) {
-      currentFile.value = null;
-      if (editor) {
-        editor.setValue('');
+      if (openedFiles.value.length > 0) {
+        // 切换到相邻的文件
+        const nextFile = openedFiles.value[openedIndex] || openedFiles.value[openedIndex - 1];
+        if (nextFile) {
+          openFile(nextFile);
+        }
+      } else {
+        // 没有打开的文件了
+        currentFile.value = null;
+        if (editor) {
+          editor.setValue('');
+        }
       }
     }
 
@@ -1847,6 +1953,130 @@ onUnmounted(() => {
   flex-direction: column;
   overflow: hidden;
   min-height: 0;
+}
+
+/* 文件标签栏 */
+.file-tabs {
+  display: flex;
+  align-items: center;
+  background: #ffffff;
+  border-bottom: 1px solid #e0e3eb;
+  overflow-x: auto;
+  overflow-y: hidden;
+  flex-shrink: 0;
+  height: 36px;
+}
+
+.file-tabs::-webkit-scrollbar {
+  height: 3px;
+}
+
+.file-tabs::-webkit-scrollbar-track {
+  background: #f8f9fa;
+}
+
+.file-tabs::-webkit-scrollbar-thumb {
+  background: #c4c9d4;
+  border-radius: 3px;
+}
+
+.file-tabs::-webkit-scrollbar-thumb:hover {
+  background: #a0a6b0;
+}
+
+.file-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: #f8f9fa;
+  border-right: 1px solid #e0e3eb;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.15s ease;
+  min-width: 120px;
+  max-width: 200px;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.file-tab::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #2962ff;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.file-tab:hover {
+  background: #ffffff;
+}
+
+.file-tab.active {
+  background: #ffffff;
+  color: #2962ff;
+}
+
+.file-tab.active::after {
+  opacity: 1;
+}
+
+.tab-icon {
+  flex-shrink: 0;
+  color: #76808f;
+  transition: color 0.15s;
+}
+
+.file-tab.active .tab-icon {
+  color: #2962ff;
+}
+
+.tab-name {
+  flex: 1;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #3b4252;
+  font-weight: 400;
+}
+
+.file-tab.active .tab-name {
+  color: #2962ff;
+  font-weight: 500;
+}
+
+.tab-close {
+  width: 20px;
+  height: 20px;
+  background: transparent;
+  border: none;
+  color: #76808f;
+  cursor: pointer;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  opacity: 0;
+  flex-shrink: 0;
+}
+
+.file-tab:hover .tab-close {
+  opacity: 1;
+}
+
+.tab-close:hover {
+  background: #f0f3fa;
+  color: #ef5350;
+}
+
+.tab-close:active {
+  background: #e0e3eb;
 }
 
 .editor-toolbar {
