@@ -254,12 +254,22 @@
             </div>
           </div>
           <div v-if="bottomPanel === 'problems'" class="problems-list">
-            <div v-for="(problem, index) in problems" :key="index" class="problem-item">
-              <svg class="problem-icon" viewBox="0 0 16 16" width="14" height="14">
-                <circle cx="8" cy="8" r="7" fill="#f48771"/>
+            <div v-if="problems.length === 0" class="no-problems">
+              <svg viewBox="0 0 24 24" width="48" height="48" style="color: #26a69a; margin-bottom: 12px;">
+                <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
+                <path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <p style="color: #76808f; font-size: 13px; margin: 0;">没有发现问题</p>
+            </div>
+            <div v-for="(problem, index) in problems" :key="index" :class="['problem-item', problem.severity]">
+              <svg class="problem-icon" viewBox="0 0 16 16" width="16" height="16">
+                <circle v-if="problem.severity === 'error'" cx="8" cy="8" r="7" fill="#ef5350"/>
+                <path v-if="problem.severity === 'error'" d="M7 4h2v5H7zm0 6h2v2H7z" fill="white"/>
+                <path v-if="problem.severity === 'warning'" d="M8 1l7 14H1L8 1z" fill="#ff9800"/>
+                <path v-if="problem.severity === 'warning'" d="M7 6h2v5H7zm0 6h2v2H7z" fill="white"/>
               </svg>
               <span class="problem-text">{{ problem.message }}</span>
-              <span class="problem-location">Ln {{ problem.line }}, Col {{ problem.column }}</span>
+              <span class="problem-location">第 {{ problem.line }} 行, 第 {{ problem.column }} 列</span>
             </div>
           </div>
         </div>
@@ -610,6 +620,11 @@ import {ref, computed, onMounted, onUnmounted, nextTick} from 'vue';
 import * as monaco from 'monaco-editor';
 import { quantAgentService, AgentStatus } from '../services/QuantAgentService';
 import { codeFileService } from '../services/CodeFileService';
+import { registerPythonCompletionProvider } from '../services/PythonCompletionProvider';
+import { pythonSyntaxChecker } from '../services/PythonSyntaxChecker';
+import { PineScriptParser } from '../services/PineScriptParser';
+import { indicatorStore } from '../stores/IndicatorStore';
+import { MarketDataService } from '../services/MarketDataService';
 
 // 配置 Monaco 环境，禁用 Web Workers
 // 创建一个最小化的 worker blob，避免加载错误
@@ -641,6 +656,8 @@ interface Problem {
   message: string;
   line: number;
   column: number;
+  endLine?: number;
+  endColumn?: number;
   severity: 'error' | 'warning';
 }
 
@@ -741,12 +758,55 @@ const terminalOutput = ref<string[]>([
   '> 欢迎使用量化交易编辑器',
   '> Python 3.11.0 已就绪'
 ]);
-const problems = ref<Problem[]>([
-  {message: '未定义的变量: symbol', line: 4, column: 16, severity: 'error'}
-]);
+const problems = ref<Problem[]>([]);
 
 let editor: monaco.editor.IStandaloneCodeEditor | null = null;
 let resizeObserver: ResizeObserver | null = null;
+let completionProviderDisposable: monaco.IDisposable | null = null;
+let syntaxCheckTimeout: number | null = null;
+
+// 语法检查函数
+const checkSyntaxAndUpdateMarkers = () => {
+  if (!editor || !currentFile.value) {
+    return;
+  }
+
+  const code = editor.getValue();
+  const syntaxErrors = pythonSyntaxChecker.checkSyntax(code);
+
+  // 更新 Problems 面板
+  problems.value = syntaxErrors.map(error => ({
+    message: error.message,
+    line: error.line,
+    column: error.column,
+    endLine: error.endLine,
+    endColumn: error.endColumn,
+    severity: error.severity,
+  }));
+
+  // 更新 Monaco Editor 的 markers
+  const model = editor.getModel();
+  if (model) {
+    const markers = syntaxErrors.map(error => ({
+      startLineNumber: error.line,
+      startColumn: error.column,
+      endLineNumber: error.endLine,
+      endColumn: error.endColumn,
+      message: error.message,
+      severity: error.severity === 'error'
+        ? monaco.MarkerSeverity.Error
+        : monaco.MarkerSeverity.Warning,
+    }));
+
+    monaco.editor.setModelMarkers(model, 'python-syntax', markers);
+  }
+
+  // 如果有错误，自动打开 Problems 面板
+  if (syntaxErrors.length > 0 && !panelVisibility.value.problems) {
+    panelVisibility.value.problems = true;
+    bottomPanel.value = 'problems';
+  }
+};
 
 // 打开文件
 const openFile = async (file: CodeFile) => {
@@ -820,6 +880,14 @@ const openFile = async (file: CodeFile) => {
         if (openedIndex !== -1) {
           openedFiles.value[openedIndex].content = currentFile.value.content;
         }
+
+        // 实时语法检查（使用防抖）
+        if (syntaxCheckTimeout) {
+          clearTimeout(syntaxCheckTimeout);
+        }
+        syntaxCheckTimeout = setTimeout(() => {
+          checkSyntaxAndUpdateMarkers();
+        }, 500); // 500ms 防抖延迟
       }
     });
 
@@ -846,9 +914,19 @@ const openFile = async (file: CodeFile) => {
       }
     });
     resizeObserver.observe(editorContainer.value);
+
+    // 初始语法检查
+    setTimeout(() => {
+      checkSyntaxAndUpdateMarkers();
+    }, 100);
   } else if (editor) {
     // 编辑器已存在，只需要更新内容
     editor.setValue(targetFile.content || '');
+
+    // 切换文件后进行语法检查
+    setTimeout(() => {
+      checkSyntaxAndUpdateMarkers();
+    }, 100);
   }
 };
 
@@ -1428,14 +1506,23 @@ const confirmDelete = async () => {
 
 // 键盘快捷键处理
 const handleKeyDown = (e: KeyboardEvent) => {
-  // Ctrl+C: 复制
+  // 检查焦点是否在Monaco编辑器中
+  const target = e.target as HTMLElement;
+  const isEditorFocused = target.closest('.monaco-editor') !== null;
+
+  // 如果焦点在编辑器中，不拦截复制粘贴等快捷键，让Monaco自己处理
+  if (isEditorFocused) {
+    return;
+  }
+
+  // Ctrl+C: 复制文件（仅在编辑器外）
   if (e.ctrlKey && e.key === 'c' && selectedFile.value) {
     e.preventDefault();
     contextMenuFile.value = selectedFile.value;
     copyFile();
   }
 
-  // Ctrl+V: 粘贴
+  // Ctrl+V: 粘贴文件（仅在编辑器外）
   if (e.ctrlKey && e.key === 'v') {
     e.preventDefault();
     pasteFile();
@@ -1524,9 +1611,73 @@ const checkCode = () => {
 };
 
 // 添加指标
-const addIndicator = () => {
-  terminalOutput.value.push('> 添加指标到图表...');
-  // TODO: 实现添加指标逻辑
+const addIndicator = async () => {
+  if (!currentFile.value || currentFile.value.type !== 'indicator') {
+    terminalOutput.value.push('> 错误: 只能添加指标文件到图表');
+    return;
+  }
+
+  if (!editor) {
+    terminalOutput.value.push('> 错误: 编辑器未初始化');
+    return;
+  }
+
+  try {
+    terminalOutput.value.push('> 正在解析指标代码...');
+
+    // 获取当前编辑器中的代码
+    const script = editor.getValue();
+
+    // 使用 PineScriptParser 解析代码
+    const { title, overlay, plots } = PineScriptParser.parse(script);
+
+    if (plots.length === 0) {
+      terminalOutput.value.push('> 错误: 未找到 plot() 语句');
+      return;
+    }
+
+    terminalOutput.value.push(`> 解析成功: ${title}, overlay=${overlay}, plots=${plots.length}`);
+    terminalOutput.value.push('> 正在获取K线数据...');
+
+    // 获取当前图表的K线数据（默认使用 EURUSD，D1周期）
+    // TODO: 后续可以让用户选择品种和周期
+    const klineData = await MarketDataService.queryKline({
+      symbol: 'EURUSD',
+      timeframe: '1d',
+      limit: 200,
+    });
+
+    terminalOutput.value.push(`> 获取到 ${klineData.length} 条K线数据`);
+    terminalOutput.value.push('> 正在计算指标值...');
+
+    // 计算指标数据
+    const plotConfigs = PineScriptParser.calculate(script, klineData);
+
+    if (plotConfigs.length === 0) {
+      terminalOutput.value.push('> 错误: 指标计算失败');
+      return;
+    }
+
+    terminalOutput.value.push(`> 计算完成，生成 ${plotConfigs.length} 个绘图`);
+
+    // 添加到指标存储
+    const indicator = {
+      id: `${currentFile.value.id}_${Date.now()}`,
+      name: title,
+      script: script,
+      overlay: overlay,
+      plots: plotConfigs,
+      createdAt: Date.now(),
+    };
+
+    indicatorStore.addIndicator(indicator);
+
+    terminalOutput.value.push(`> 指标已添加到图表: ${title}`);
+    terminalOutput.value.push(`> 提示: 请切换到图表页面查看指标效果`);
+  } catch (error: any) {
+    terminalOutput.value.push(`> 错误: 添加指标失败 - ${error.message || error}`);
+    console.error('添加指标失败:', error);
+  }
 };
 
 // 回测
@@ -1788,6 +1939,9 @@ const loadFiles = async () => {
 onMounted(() => {
   // Monaco Editor 将在第一次打开文件时创建
 
+  // 注册 Python 代码补全提供器
+  completionProviderDisposable = registerPythonCompletionProvider();
+
   // 加载文件列表
   loadFiles();
 
@@ -1797,10 +1951,22 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  // 清理语法检查定时器
+  if (syntaxCheckTimeout) {
+    clearTimeout(syntaxCheckTimeout);
+    syntaxCheckTimeout = null;
+  }
+
   // 断开 ResizeObserver
   if (resizeObserver) {
     resizeObserver.disconnect();
     resizeObserver = null;
+  }
+
+  // 清理代码补全提供器
+  if (completionProviderDisposable) {
+    completionProviderDisposable.dispose();
+    completionProviderDisposable = null;
   }
 
   // 清理侧边栏拖拽事件
@@ -2607,14 +2773,39 @@ onUnmounted(() => {
   gap: 8px;
 }
 
+.no-problems {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+}
+
 .problem-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px;
-  background: #fff5f5;
-  border-radius: 4px;
-  font-size: 12px;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.problem-item.error {
+  background: #ffebee;
+  border-left: 3px solid #ef5350;
+}
+
+.problem-item.warning {
+  background: #fff3e0;
+  border-left: 3px solid #ff9800;
+}
+
+.problem-item:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transform: translateX(2px);
 }
 
 .problem-icon {

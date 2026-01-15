@@ -126,9 +126,7 @@
 <script setup lang="ts">
 import {ref, onMounted, onUnmounted, watch, computed} from 'vue';
 import {createChart, IChartApi, ISeriesApi} from 'lightweight-charts';
-import MarketDataService from '../services/MarketDataService';
-import { marketWebSocket } from '../services/MarketWebSocket';
-import { indicatorStore } from '../stores/IndicatorStore';
+import {MockDataService} from '../services/MockDataService';
 
 const props = defineProps<{
   timeframe: string;
@@ -140,11 +138,11 @@ const markersContainer = ref<HTMLDivElement>();
 let chart: IChartApi | null = null;
 let candlestickSeries: ISeriesApi<'Candlestick'> | null = null;
 let volumeSeries: ISeriesApi<'Histogram'> | null = null;
-// 存储指标的线条系列
-let indicatorSeriesMap: Map<string, ISeriesApi<'Line'>[]> = new Map();
 
 // 保存标记定位函数的引用，以便在resize时调用
 let positionMarkersFunc: (() => void) | null = null;
+
+const mockDataService = new MockDataService();
 
 // 品类数据
 interface SymbolInfo {
@@ -212,11 +210,6 @@ const selectSymbol = (symbolCode: string) => {
   showSymbolDialog.value = false;
   searchText.value = '';
   filteredSymbols.value = symbolsData;
-
-  // 订阅新品种
-  if (marketWebSocket.isConnected()) {
-    marketWebSocket.subscribe(symbolCode);
-  }
 
   // 重新加载数据
   loadData();
@@ -402,139 +395,58 @@ const createCustomMarkers = (volumeData: any[]) => {
 /**
  * 加载数据
  */
-const loadData = async () => {
-  // 时间周期转换映射：前端格式 -> 后端格式
-  const timeframeMap: Record<string, string> = {
-    'S1': '1m',    // 1秒 -> 1分钟 (后端没有秒级数据)
-    'S3': '1m',    // 3秒 -> 1分钟
-    'M1': '1m',    // 1分钟
-    'M15': '15m',  // 15分钟
-    'M30': '1h',   // 30分钟 -> 1小时 (后端没有30分钟数据)
-    'H1': '1h',    // 1小时
-    'D1': '1d',    // 日线
-    'W1': '1d',    // 周线 -> 日线 (后端没有周线数据)
-    'MN1': '1d',   // 月线 -> 日线
+const loadData = () => {
+  const intervalMap: Record<string, number> = {
+    'S1': 1,
+    'S3': 3,
+    'M1': 60,
+    'M15': 900,
+    'M30': 1800,
+    'H1': 3600,
+    'D1': 86400,
+    'W1': 604800,
+    'MN1': 2592000,
   };
 
-  const backendTimeframe = timeframeMap[props.timeframe] || '1d';
+  const interval = intervalMap[props.timeframe] || 3600;
+  const candleData = mockDataService.generateCandlestickData(200, interval);
+  const volumeData = mockDataService.generateVolumeData(candleData);
 
-  try {
-    // 从后端API获取K线数据
-    const data = await MarketDataService.queryKline({
-      symbol: currentSymbol.value,
-      timeframe: backendTimeframe,
-      limit: 200,
-    });
+  if (candlestickSeries) {
+    candlestickSeries.setData(candleData);
+  }
 
-    if (!data || data.length === 0) {
-      console.warn('未获取到K线数据');
-      return;
-    }
-
-    // 转换为 lightweight-charts 格式
-    const candleData = data.map(item => ({
-      time: item.time / 1000, // 毫秒转秒
-      open: item.open,
-      high: item.high,
-      low: item.low,
-      close: item.close,
-    }));
-
-    // 生成成交量数据 (基于价格波动计算)
-    const volumeData = data.map((item, index) => {
-      // 如果后端有真实成交量数据，直接使用
-      if (item.volume && item.volume > 0) {
-        return {
-          time: item.time / 1000,
-          value: item.volume,
-        };
-      }
-
-      // 否则，根据价格波动计算成交量
-      const priceRange = item.high - item.low; // 价格振幅
-      const bodySize = Math.abs(item.close - item.open); // K线实体大小
-      const priceAvg = (item.high + item.low) / 2; // 平均价格
-
-      // 基础成交量：根据价格振幅和实体大小
-      // 振幅越大、实体越大 -> 成交量越大
-      const volatilityFactor = (priceRange / priceAvg) * 100; // 波动率(%)
-      const bodyFactor = (bodySize / priceAvg) * 100; // 实体比率(%)
-
-      // 根据品种调整基础成交量
-      let baseVolume = 1000;
-      if (currentSymbol.value === 'XAUUSD') {
-        baseVolume = 500; // 黄金成交量相对较小
-      } else if (currentSymbol.value === 'USDX') {
-        baseVolume = 2000; // 美元指数成交量较大
-      }
-
-      // 计算成交量：基础量 * (1 + 波动率 + 实体比率) * 随机因子(0.7-1.3)
-      // 使用时间戳生成固定的"随机"因子（每个K线的时间戳唯一，所以结果稳定）
-      const seedFromTime = (item.time % 10000) / 10000; // 0-1之间的固定值
-      const calculatedVolume = baseVolume * (1 + volatilityFactor + bodyFactor) * (0.7 + seedFromTime * 0.6);
-
-      // 添加趋势因素：如果是连续涨跌，成交量递增
-      if (index > 0) {
-        const prevItem = data[index - 1];
-        const isSameTrend = (item.close > item.open && prevItem.close > prevItem.open) ||
-                           (item.close < item.open && prevItem.close < prevItem.open);
-        if (isSameTrend) {
-          return {
-            time: item.time / 1000,
-            value: calculatedVolume * 1.2, // 同向趋势，成交量放大
-          };
-        }
-      }
-
+  if (volumeSeries) {
+    // 为成交量数据添加颜色（根据涨跌）
+    const coloredVolumeData = volumeData.map((item, index) => {
+      const candle = candleData[index];
+      const color = candle.close >= candle.open ? 'rgba(38, 166, 154, 0.5)' : 'rgba(239, 83, 80, 0.5)';
       return {
-        time: item.time / 1000,
-        value: calculatedVolume,
+        ...item,
+        color: color,
       };
     });
+    volumeSeries.setData(coloredVolumeData);
+  }
 
-    // 设置K线数据
+  // 更新价格信息
+  updatePriceInfo(candleData);
+
+  if (chart) {
+    // 更新价格精度
     if (candlestickSeries) {
-      candlestickSeries.setData(candleData);
-    }
-
-    // 设置成交量数据
-    if (volumeSeries) {
-      // 为成交量数据添加颜色（根据涨跌）
-      const coloredVolumeData = volumeData.map((item, index) => {
-        const candle = candleData[index];
-        const color = candle.close >= candle.open ? 'rgba(38, 166, 154, 0.5)' : 'rgba(239, 83, 80, 0.5)';
-        return {
-          ...item,
-          color: color,
-        };
+      candlestickSeries.applyOptions({
+        priceFormat: {
+          type: 'price',
+          precision: currentSymbolInfo.value.precision,
+          minMove: Math.pow(10, -currentSymbolInfo.value.precision)
+        },
       });
-      volumeSeries.setData(coloredVolumeData);
     }
 
-    // 更新价格信息
-    updatePriceInfo(candleData);
-
-    if (chart) {
-      // 更新价格精度
-      if (candlestickSeries) {
-        candlestickSeries.applyOptions({
-          priceFormat: {
-            type: 'price',
-            precision: currentSymbolInfo.value.precision,
-            minMove: Math.pow(10, -currentSymbolInfo.value.precision)
-          },
-        });
-      }
-
-      chart.timeScale().fitContent();
-      // 设置时间范围完成后创建C事件标记
-      createCustomMarkers(volumeData);
-
-      // 渲染所有激活的指标
-      renderIndicators();
-    }
-  } catch (error) {
-    console.error('加载K线数据失败:', error);
+    chart.timeScale().fitContent();
+    // 设置时间范围完成后创建C事件标记
+    createCustomMarkers(volumeData);
   }
 };
 
@@ -580,101 +492,14 @@ const handleResize = () => {
 // ResizeObserver 用于监听容器大小变化
 let resizeObserver: ResizeObserver | null = null;
 
-/**
- * 渲染指标到图表
- */
-const renderIndicators = () => {
-  if (!chart) return;
-
-  // 清除所有现有的指标系列
-  indicatorSeriesMap.forEach((seriesList) => {
-    seriesList.forEach(series => {
-      chart?.removeSeries(series);
-    });
-  });
-  indicatorSeriesMap.clear();
-
-  // 获取当前激活的指标
-  const indicators = indicatorStore.getActiveIndicators();
-
-  // 为每个指标添加线条系列
-  indicators.forEach((indicator) => {
-    const seriesList: ISeriesApi<'Line'>[] = [];
-
-    indicator.plots.forEach((plot) => {
-      // 创建线条系列
-      const lineSeries = chart!.addLineSeries({
-        color: plot.color,
-        lineWidth: plot.lineWidth,
-        title: plot.name,
-        lastValueVisible: true,
-        priceLineVisible: false,
-        priceScaleId: '', // 使用默认的右侧价格刻度，与K线图共享
-      });
-
-      // 设置数据
-      lineSeries.setData(plot.data);
-
-      seriesList.push(lineSeries);
-    });
-
-    // 保存系列引用
-    indicatorSeriesMap.set(indicator.id, seriesList);
-  });
-
-  console.log(`已渲染 ${indicators.length} 个指标`);
-};
-
 // 监听 timeframe 变化
 watch(() => props.timeframe, () => {
   loadData();
 });
 
-onMounted(async () => {
+onMounted(() => {
   initChart();
-  await loadData();
-
-  // 监听指标存储变化
-  watch(() => indicatorStore.getActiveIndicators().length, () => {
-    renderIndicators();
-  }, { deep: true });
-
-  // 连接WebSocket
-  try {
-    await marketWebSocket.connect();
-
-    // 订阅当前交易品种
-    marketWebSocket.subscribe(currentSymbol.value);
-
-    // 监听实时Tick数据
-    marketWebSocket.on('tick', (message) => {
-      const ticks = message.data;
-      if (Array.isArray(ticks)) {
-        const currentTick = ticks.find(t => t.symbol === currentSymbol.value);
-        if (currentTick) {
-          // 更新实时价格
-          currentPrice.value = currentTick.lastPrice;
-
-          // 更新价格方向
-          if (priceData.value.close > 0) {
-            priceDirection.value = currentTick.lastPrice >= priceData.value.close ? 'up' : 'down';
-          }
-        }
-      }
-    });
-
-    // 监听K线数据推送
-    marketWebSocket.on('kline', (message) => {
-      if (message.symbol === currentSymbol.value && message.data) {
-        console.log('[ChartContainer] 收到新K线数据:', message.data);
-        // TODO: 可以在这里更新最新的K线数据到图表
-      }
-    });
-
-    console.log('[ChartContainer] WebSocket连接成功');
-  } catch (error) {
-    console.error('[ChartContainer] WebSocket连接失败:', error);
-  }
+  loadData();
 
   // 监听 window resize
   window.addEventListener('resize', handleResize);
@@ -689,9 +514,6 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
-  // 断开WebSocket连接
-  marketWebSocket.close();
-
   window.removeEventListener('resize', handleResize);
 
   // 清理防抖定时器
